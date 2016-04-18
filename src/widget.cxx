@@ -5,7 +5,7 @@
 #include <boost/filesystem.hpp>
 
 #include "SFE/widget.hxx"
-#include "SFE/utility.hxx"
+#include "SFE/resource_manager.hxx"
 
 void foo()
 {
@@ -203,6 +203,16 @@ namespace sfe
         scale_ = s;
     }
 
+    float Widget::get_ratio() const
+    {
+        return ratio_;
+    }
+
+    void Widget::set_ratio(float r)
+    {
+        ratio_ = r;
+    }
+
     void Widget::sort_widgets()
     {
         auto comp = [](auto && a, auto && b)
@@ -222,6 +232,20 @@ namespace sfe
         auto r = sf::RectangleShape({ 1.0f, 1.0f });
         r.setFillColor(color_);
         target.draw(r);
+    }
+
+    ImageWidget::ImageWidget(std::string const & string)
+        :
+        texture_(ResourceManager::global().get_texture(string))
+    {
+        set_ratio(texture_.getSize().x / static_cast<float>(texture_.getSize().y));
+    }
+
+    void ImageWidget::render_impl(sf::RenderTarget & target) const
+    {
+        sf::Sprite spr(texture_);
+        spr.setScale(1.0f / texture_.getSize().x, 1.0f / texture_.getSize().y);
+        target.draw(spr);
     }
 
 } // namespace sfe

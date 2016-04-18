@@ -14,17 +14,22 @@ int main()
     container.set_height(0.25);
     container.set_x(0.25);
     container.set_y(0.25);
-
+    
     auto w0 = std::make_unique<ColorWidget>(sf::Color(0, 0, 255));
     w0->set_width(0.5);
     w0->set_height(0.5);
     container.add_widget(std::move(w0));
+
+    auto w2 = std::make_unique<ImageWidget>("disk.png");
+    w2->set_scale(Scale::X);
+    w2->set_align_x(AlignX::Center);
 
     auto w1 = std::make_unique<ColorWidget>(sf::Color(0, 255, 0));
     w1->set_width(0.5);
     w1->set_height(0.5);
     w1->set_x(0.5);
     w1->set_y(0.5);
+    w1->add_widget(std::move(w2));
     container.add_widget(std::move(w1));
 
     // Create a clock to measure the elapsed time per frame.
@@ -32,7 +37,7 @@ int main()
 
     // Create the window.
     sf::RenderWindow window(sf::VideoMode(800, 600), "Test");
-    Widget::viewport_ratio = 1.333333; // 800 / 600
+    Widget::viewport_ratio = 1.333333f; // 800 / 600
     window.setView({ { 0.5f, 0.5f }, { 1.0f, 1.0f } });
 
     // Run the main loop.
@@ -44,6 +49,8 @@ int main()
         {
             if (event.type == sf::Event::Closed)
                 window.close();
+            else if (event.type == sf::Event::Resized)
+                ; // TODO: Give the new size to the screen.
         }
 
         // Update the widgets.

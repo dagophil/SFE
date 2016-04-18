@@ -14,5 +14,12 @@ link_directories(${Boost_LIBRARY_DIRS})
  include_directories(${SFML_INCLUDE_DIR})
  #add_definitions(-DSFML_DYNAMIC)
 
+# Define a copy makro.
+macro(copyfile tar filename)
+	add_custom_command(TARGET ${tar} PRE_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy
+                   ${CMAKE_CURRENT_SOURCE_DIR}/${filename} ${CMAKE_CURRENT_BINARY_DIR}/${filename})
+endmacro()
+
 add_subdirectory(src)
 add_subdirectory(test)

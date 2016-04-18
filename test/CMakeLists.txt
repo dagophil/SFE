@@ -3,3 +3,4 @@ target_link_libraries(sfetests
 	sfe
 	${SFML_LIBRARIES}
 )
+copyfile(sfetests disk.png)
