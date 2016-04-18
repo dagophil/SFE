@@ -25,13 +25,23 @@ namespace sfe
         align_x_(AlignX::Left),
         align_y_(AlignY::Top),
         scale_(Scale::None),
-        ratio_(1.0f)
+        ratio_(1.0f),
+        mouseover_(false),
+        hovered_(false)
     {}
 
     Widget* Widget::add_widget(std::unique_ptr<Widget> w)
     {
-        widgets_.push_back(std::move(w));
-        return widgets_.back().get();
+        auto ret = w.get();
+
+        // Use insertion sort with respect to the z-index.
+        auto comp = [](auto && a, auto && b)
+        {
+            return a->get_z_index() < b->get_z_index();
+        };
+        auto it = std::lower_bound(widgets_.begin(), widgets_.end(), w, comp);
+        widgets_.insert(it, std::move(w));
+        return ret;
     }
 
     std::unique_ptr<Widget> Widget::remove_widget(Widget* w)
@@ -58,6 +68,69 @@ namespace sfe
         widgets_.clear();
     }
 
+    void Widget::update_mouseover(float x, float y)
+    {
+        // Save the old mouseover state.
+        auto old_mouseover = mouseover_;
+
+        // Update the mouseoverstate.
+        auto r = render_rect();
+        mouseover_ = r.contains(x, y);
+
+        // Fire the mouseover events.
+        if (!old_mouseover && mouseover_)
+        {
+            for (auto const & f : mouse_enter_callbacks_)
+                f();
+        }
+        else if (old_mouseover && !mouseover_)
+        {
+            for (auto const & f : mouse_leave_callbacks_)
+                f();
+        }
+
+        // Update the subwidgets.
+        x = (x - r.left) / r.width;
+        y = (y - r.top) / r.height;
+        for (auto const & w : widgets_)
+            w->update_mouseover(x, y);
+    }
+
+    bool Widget::update_hover()
+    {
+        // Check if a subwidget was hovered.
+        bool sub_hovered = false;
+        for (auto it = widgets_.rbegin(); it != widgets_.rend(); ++it)
+        {
+            if ((*it)->update_hover())
+            {
+                sub_hovered = true;
+                break;
+            }
+        }
+
+        // Save the old hover state.
+        auto old_hovered = hovered_;
+
+        // Update the hover state.
+        hovered_ = sub_hovered ? false : mouseover_;
+
+        // Fire the hover events.
+        if (!old_hovered && hovered_)
+        {
+            for (auto const & f : hover_begin_callbacks_)
+                f();
+        }
+        else if (old_hovered && !hovered_)
+        {
+            for (auto const & f : hover_end_callbacks_)
+                f();
+        }
+
+        // Return whether the widget or a subwidget is hovered.
+        return sub_hovered ? true : hovered_;
+    }
+
     void Widget::update(sf::Time elapsed_time)
     {
         update_impl(elapsed_time);
@@ -73,45 +146,11 @@ namespace sfe
         auto const & center = old_view.getCenter();
         auto const & size = old_view.getSize();
 
-        // Compute the widget size with respect to the scale method.
-        float width;
-        float height;
-        if (scale_ == Scale::X)
-        {
-            height = rect_.height;
-            width = ratio_ * height / viewport_ratio;
-        }
-        else if (scale_ == Scale::Y)
-        {
-            width = rect_.width;
-            height = width / ratio_ * viewport_ratio;
-        }
-        else // scale_ == Scale::None
-        {
-            width = rect_.width;
-            height = rect_.height;
-        }
-
-        // Compute the widget position with respect to horizontal and vertical alignment.
-        float left;
-        if (align_x_ == AlignX::Left)
-            left = rect_.left;
-        else if (align_x_ == AlignX::Right)
-            left = 1.0f - rect_.left - width;
-        else // align_x_ == AlignX::Center
-            left = 0.5f - 0.5f * width + rect_.left;
-        float top;
-        if (align_y_ == AlignY::Top)
-            top = rect_.top;
-        else if (align_y_ == AlignY::Bottom)
-            top = 1.0f - rect_.top - height;
-        else // align_y_ == AlignY::Center
-            top = 0.5f - 0.5f * height+ rect_.top;
-
         // Assign the new view.
+        auto r = render_rect();
         sf::View view;
-        view.setSize({ size.x / width, size.y / height });
-        view.setCenter({ (center.x - left) / width, (center.y - top) / height });
+        view.setSize({ size.x / r.width, size.y / r.height });
+        view.setCenter({ (center.x - r.left) / r.width, (center.y - r.top) / r.height });
         target.setView(view);
 
         // Render the widget and the subwidgets.
@@ -211,6 +250,112 @@ namespace sfe
     void Widget::set_ratio(float r)
     {
         ratio_ = r;
+    }
+
+    bool Widget::get_mouseover() const
+    {
+        return mouseover_;
+    }
+
+    bool Widget::get_hovered() const
+    {
+        return hovered_;
+    }
+
+    void Widget::add_mouse_enter_callback(std::function<void()> && f)
+    {
+        mouse_enter_callbacks_.emplace_back(f);
+    }
+
+    void Widget::add_mouse_leave_callback(std::function<void()> && f)
+    {
+        mouse_leave_callbacks_.emplace_back(f);
+    }
+
+    void Widget::add_hover_begin_callback(std::function<void()> && f)
+    {
+        hover_begin_callbacks_.emplace_back(f);
+    }
+
+    void Widget::add_hover_end_callback(std::function<void()> && f)
+    {
+        hover_end_callbacks_.emplace_back(f);
+    }
+
+    void Widget::add_click_callback(std::function<void()> && f)
+    {
+        click_callbacks_.emplace_back(f);
+    }
+
+    void Widget::clear_mouse_enter_callbacks()
+    {
+        mouse_enter_callbacks_.clear();
+    }
+
+    void Widget::clear_mouse_leave_callbacks()
+    {
+        mouse_leave_callbacks_.clear();
+    }
+
+    void Widget::clear_hover_begin_callbacks()
+    {
+        hover_begin_callbacks_.clear();
+    }
+
+    void Widget::clear_hover_end_callbacks()
+    {
+        hover_end_callbacks_.clear();
+    }
+
+    void Widget::clear_click_callbacks()
+    {
+        click_callbacks_.clear();
+    }
+
+    void Widget::update_impl(sf::Time elapsed_time)
+    {}
+
+    void Widget::render_impl(sf::RenderTarget & target) const
+    {}
+
+    sf::FloatRect Widget::render_rect() const
+    {
+        // Compute the size with respect to the scale method.
+        float width;
+        float height;
+        if (scale_ == Scale::X)
+        {
+            height = rect_.height;
+            width = ratio_ * height / viewport_ratio;
+        }
+        else if (scale_ == Scale::Y)
+        {
+            width = rect_.width;
+            height = width / ratio_ * viewport_ratio;
+        }
+        else // scale_ == Scale::None
+        {
+            width = rect_.width;
+            height = rect_.height;
+        }
+
+        // Compute the widget position with respect to horizontal and vertical alignment.
+        float left;
+        if (align_x_ == AlignX::Left)
+            left = rect_.left;
+        else if (align_x_ == AlignX::Right)
+            left = 1.0f - rect_.left - width;
+        else // align_x_ == AlignX::Center
+            left = 0.5f - 0.5f * width + rect_.left;
+        float top;
+        if (align_y_ == AlignY::Top)
+            top = rect_.top;
+        else if (align_y_ == AlignY::Bottom)
+            top = 1.0f - rect_.top - height;
+        else // align_y_ == AlignY::Center
+            top = 0.5f - 0.5f * height + rect_.top;
+
+        return { left, top, width, height };
     }
 
     void Widget::sort_widgets()

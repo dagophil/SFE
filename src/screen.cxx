@@ -1,21 +1,36 @@
+#include <iostream>
+
 #include "SFE/screen.hxx"
 
 namespace sfe
 {
 
-    Screen::Screen(unsigned int window_width, unsigned int window_height)
+    void Screen::update(sf::RenderWindow const & window, sf::Time elapsed_time)
     {
-        resize(window_width, window_height);
-    }
+        // Update the viewport ratio for the widgets.
+        Widget::viewport_ratio = window.getSize().x / static_cast<float>(window.getSize().y);
 
-    void Screen::resize(unsigned int window_width, unsigned int window_height)
-    {
-        Widget::viewport_ratio = window_width / static_cast<float>(window_height);
-    }
+        // Process the user input.
+        if (window.hasFocus())
+        {
+            // Get the mouse position on the window.
+            auto mouse_pos = sf::Mouse::getPosition(window);
 
-    void Screen::update(sf::Time elapsed_time)
-    {
+            // Update mouseover and hover states of the gui widgets.
+            gui_.update_mouseover(mouse_pos.x / static_cast<float>(window.getSize().x),
+                                  mouse_pos.y / static_cast<float>(window.getSize().y));
+            auto gui_clicked = gui_.update_hover();
+
+            // TODO:
+            // Update the hover states of the game objects.
+            // If no gui widget was clicked, forward the click to the game objects.
+        }
+
+        // Update the logic of the gui widgets.
         gui_.update(elapsed_time);
+
+        // TODO:
+        // Update the logic of the game objects.
     }
 
     void Screen::render(sf::RenderTarget & target) const
