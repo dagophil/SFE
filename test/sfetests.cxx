@@ -4,6 +4,7 @@
 
 #include <SFE/screen.hxx>
 #include <SFE/widget.hxx>
+#include <SFE/input.hxx>
 
 void create_widgets(sfe::Widget & container)
 {
@@ -79,15 +80,23 @@ int main()
     while (window.isOpen())
     {
         // Process window events.
+        sfe::Input::global().reset();
         sf::Event event;
-        while (window.pollEvent(event))
-        {
+        while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
             {
                 window.close();
             }
+            else if (event.type == sf::Event::KeyPressed)
+            {
+                sfe::Input::global().press(event.key.code);
+            }
+            else if (event.type == sf::Event::MouseButtonPressed)
+            {
+                sfe::Input::global().press(event.mouseButton.button);
+            }
         }
-        
+
         // Update the screen.
         auto elapsed_time = clock.restart();
         screen.update(window, elapsed_time);
