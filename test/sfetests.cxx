@@ -16,12 +16,6 @@ void create_widgets(sfe::Widget & container)
     background->set_height(0.25);
     background->set_x(0.25);
     background->set_y(0.25);
-    background->add_hover_begin_callback([]() {
-        std::cout << "hover begin bg" << std::endl;
-    });
-    background->add_hover_end_callback([]() {
-        std::cout << "hover end bg" << std::endl;
-    });
 
     // Add blue in the upper left corner.
     auto w0 = std::make_unique<ColorWidget>(sf::Color(0, 0, 255));
@@ -34,23 +28,14 @@ void create_widgets(sfe::Widget & container)
     w1->set_height(0.5);
     w1->set_x(0.5);
     w1->set_y(0.5);
-    w1->add_hover_begin_callback([]() {
-        std::cout << "hover begin green" << std::endl;
-    });
-    w1->add_hover_end_callback([]() {
-        std::cout << "hover end green" << std::endl;
+    w1->add_click_begin_callback([](Widget & w) {
+        w.clear_widgets();
     });
 
     // Add the disk image on top of the green.
     auto w2 = std::make_unique<ImageWidget>("disk.png");
     w2->set_scale(Scale::X);
     w2->set_align_x(AlignX::Center);
-    w2->add_hover_begin_callback([]() {
-        std::cout << "hover begin disk" << std::endl;
-    });
-    w2->add_hover_end_callback([]() {
-        std::cout << "hover end disk" << std::endl;
-    });
     w1->add_widget(std::move(w2));
     
     // Nest the widgets.

@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "SFE/screen.hxx"
+#include "SFE/utility.hxx"
 
 namespace sfe
 {
@@ -9,7 +10,7 @@ namespace sfe
     {
         // Update the viewport ratio for the widgets.
         Widget::viewport_ratio = window.getSize().x / static_cast<float>(window.getSize().y);
-
+        
         // Process the user input.
         if (window.hasFocus())
         {

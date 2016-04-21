@@ -46,6 +46,11 @@ namespace sfe
     public:
 
         ////////////////////////////////////////////////////////////
+        /// The callback function type.
+        ////////////////////////////////////////////////////////////
+        typedef std::function<void(Widget &)> CallbackFunction;
+
+        ////////////////////////////////////////////////////////////
         /// The viewport ratio (width divided by height).
         ////////////////////////////////////////////////////////////
         static float viewport_ratio;
@@ -204,27 +209,31 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         /// Add a callback for the mouse enter event.
         ////////////////////////////////////////////////////////////
-        void add_mouse_enter_callback(std::function<void()> && f);
+        void add_mouse_enter_callback(CallbackFunction && f);
 
         ////////////////////////////////////////////////////////////
         /// Add a callback for the mouse leave event.
         ////////////////////////////////////////////////////////////
-        void add_mouse_leave_callback(std::function<void()> && f);
+        void add_mouse_leave_callback(CallbackFunction && f);
 
         ////////////////////////////////////////////////////////////
         /// Add a callback for the hover begin event.
         ////////////////////////////////////////////////////////////
-        void add_hover_begin_callback(std::function<void()> && f);
+        void add_hover_begin_callback(CallbackFunction && f);
 
         ////////////////////////////////////////////////////////////
         /// Add a callback for the hover end event.
         ////////////////////////////////////////////////////////////
-        void add_hover_end_callback(std::function<void()> && f);
+        void add_hover_end_callback(CallbackFunction && f);
 
         ////////////////////////////////////////////////////////////
-        /// Add a callback for the click event.
+        /// Add a callback for the click begin event.
         ////////////////////////////////////////////////////////////
-        void add_click_callback(std::function<void()> && f);
+        void add_click_begin_callback(CallbackFunction && f);
+
+        ////////////////////////////////////////////////////////////
+        /// Add a callback for the click end event.
+        void add_click_end_callback(CallbackFunction && f);
 
         ////////////////////////////////////////////////////////////
         /// Clear the callbacks for the mouse enter event.
@@ -247,9 +256,14 @@ namespace sfe
         void clear_hover_end_callbacks();
 
         ////////////////////////////////////////////////////////////
-        /// Clear the callbacks for the click event.
+        /// Clear the callbacks for the click begin event.
         ////////////////////////////////////////////////////////////
-        void clear_click_callbacks();
+        void clear_click_begin_callbacks();
+
+        ////////////////////////////////////////////////////////////
+        /// Clear the callbacks for the click end event.
+        ////////////////////////////////////////////////////////////
+        void clear_click_end_callbacks();
 
     protected:
 
@@ -310,17 +324,22 @@ namespace sfe
         float ratio_;
 
         ////////////////////////////////////////////////////////////
-        /// True if and only if the widget rectangle contains the
-        /// mouse.
+        /// True if the widget rectangle contains the mouse.
         ////////////////////////////////////////////////////////////
         bool mouseover_;
 
         ////////////////////////////////////////////////////////////
-        /// True if and only if the widget rectangle contains the
-        /// mouse and there is no other widget "between" this widget
-        /// and the cursor.
+        /// True if the widget rectangle contains the mouse an
+        /// there is no other widget "between" this widget and the
+        /// cursor.
         ////////////////////////////////////////////////////////////
         bool hovered_;
+
+        ////////////////////////////////////////////////////////////
+        /// True if a mouse button was pressed while the widget was
+        /// hovered and the mouse button was not released yet.
+        ////////////////////////////////////////////////////////////
+        bool mousedown_;
 
         ////////////////////////////////////////////////////////////
         /// The subwidgets.
@@ -330,27 +349,32 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         /// The callbacks for the mouse enter event.
         ////////////////////////////////////////////////////////////
-        std::vector<std::function<void()> > mouse_enter_callbacks_;
+        std::vector<CallbackFunction> mouse_enter_callbacks_;
 
         ////////////////////////////////////////////////////////////
         /// The callbacks for the mouse leave event.
         ////////////////////////////////////////////////////////////
-        std::vector<std::function<void()> > mouse_leave_callbacks_;
+        std::vector<CallbackFunction> mouse_leave_callbacks_;
 
         ////////////////////////////////////////////////////////////
         /// The callbacks for the hover begin event.
         ////////////////////////////////////////////////////////////
-        std::vector<std::function<void()> > hover_begin_callbacks_;
+        std::vector<CallbackFunction> hover_begin_callbacks_;
 
         ////////////////////////////////////////////////////////////
         /// The callbacks for the hover end event.
         ////////////////////////////////////////////////////////////
-        std::vector<std::function<void()> > hover_end_callbacks_;
+        std::vector<CallbackFunction> hover_end_callbacks_;
 
         ////////////////////////////////////////////////////////////
-        /// The callbacks for the click event.
+        /// The callbacks for the click begin event.
         ////////////////////////////////////////////////////////////
-        std::vector<std::function<void()> > click_callbacks_;
+        std::vector<CallbackFunction> click_begin_callbacks_;
+
+        ////////////////////////////////////////////////////////////
+        /// The callbacks for the click end event.
+        ////////////////////////////////////////////////////////////
+        std::vector<CallbackFunction> click_end_callbacks_;
 
     }; // class Widget
 

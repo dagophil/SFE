@@ -1,4 +1,4 @@
-add_library(sfe widget.cxx screen.cxx resource_manager.cxx input.cxx)
+add_library(sfe widget.cxx screen.cxx resource_manager.cxx input.cxx utility.cxx)
 target_link_libraries(sfe
 	${Boost_FILESYSTEM_LIBRARY}
 )

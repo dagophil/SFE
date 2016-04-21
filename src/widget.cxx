@@ -2,16 +2,9 @@
 #include <string>
 #include <algorithm>
 
-#include <boost/filesystem.hpp>
-
 #include "SFE/widget.hxx"
 #include "SFE/resource_manager.hxx"
-
-void foo()
-{
-    auto p = boost::filesystem::current_path();
-    std::cout << "current_path(): " << p.generic_string() << std::endl;
-}
+#include "SFE/input.hxx"
 
 namespace sfe
 {
@@ -27,7 +20,8 @@ namespace sfe
         scale_(Scale::None),
         ratio_(1.0f),
         mouseover_(false),
-        hovered_(false)
+        hovered_(false),
+        mousedown_(false)
     {}
 
     Widget* Widget::add_widget(std::unique_ptr<Widget> w)
@@ -81,12 +75,12 @@ namespace sfe
         if (!old_mouseover && mouseover_)
         {
             for (auto const & f : mouse_enter_callbacks_)
-                f();
+                f(*this);
         }
         else if (old_mouseover && !mouseover_)
         {
             for (auto const & f : mouse_leave_callbacks_)
-                f();
+                f(*this);
         }
 
         // Update the subwidgets.
@@ -119,12 +113,29 @@ namespace sfe
         if (!old_hovered && hovered_)
         {
             for (auto const & f : hover_begin_callbacks_)
-                f();
+                f(*this);
         }
         else if (old_hovered && !hovered_)
         {
             for (auto const & f : hover_end_callbacks_)
-                f();
+                f(*this);
+        }
+
+        // Check if a click occured on the widget.
+        if (hovered_ && sfe::Input::global().is_pressed(sf::Mouse::Left))
+        {
+            for (auto const & f : click_begin_callbacks_)
+                f(*this);
+            mousedown_ = true;
+        }
+        if (sfe::Input::global().is_released(sf::Mouse::Left))
+        {
+            if (mousedown_ && hovered_)
+            {
+                for (auto const & f : click_end_callbacks_)
+                    f(*this);
+            }
+            mousedown_ = false;
         }
 
         // Return whether the widget or a subwidget is hovered.
@@ -262,29 +273,34 @@ namespace sfe
         return hovered_;
     }
 
-    void Widget::add_mouse_enter_callback(std::function<void()> && f)
+    void Widget::add_mouse_enter_callback(CallbackFunction && f)
     {
         mouse_enter_callbacks_.emplace_back(f);
     }
 
-    void Widget::add_mouse_leave_callback(std::function<void()> && f)
+    void Widget::add_mouse_leave_callback(CallbackFunction && f)
     {
         mouse_leave_callbacks_.emplace_back(f);
     }
 
-    void Widget::add_hover_begin_callback(std::function<void()> && f)
+    void Widget::add_hover_begin_callback(CallbackFunction && f)
     {
         hover_begin_callbacks_.emplace_back(f);
     }
 
-    void Widget::add_hover_end_callback(std::function<void()> && f)
+    void Widget::add_hover_end_callback(CallbackFunction && f)
     {
         hover_end_callbacks_.emplace_back(f);
     }
 
-    void Widget::add_click_callback(std::function<void()> && f)
+    void Widget::add_click_begin_callback(CallbackFunction && f)
     {
-        click_callbacks_.emplace_back(f);
+        click_begin_callbacks_.emplace_back(f);
+    }
+
+    void Widget::add_click_end_callback(CallbackFunction && f)
+    {
+        click_end_callbacks_.emplace_back(f);
     }
 
     void Widget::clear_mouse_enter_callbacks()
@@ -307,9 +323,14 @@ namespace sfe
         hover_end_callbacks_.clear();
     }
 
-    void Widget::clear_click_callbacks()
+    void Widget::clear_click_begin_callbacks()
     {
-        click_callbacks_.clear();
+        click_begin_callbacks_.clear();
+    }
+
+    void Widget::clear_click_end_callbacks()
+    {
+        click_end_callbacks_.clear();
     }
 
     void Widget::update_impl(sf::Time elapsed_time)
