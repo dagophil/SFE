@@ -1,0 +1,6 @@
+#ifndef SFE_EXAMPLE_SNAKE_HXX
+#define SFE_EXAMPLE_SNAKE_HXX
+
+
+
+#endif

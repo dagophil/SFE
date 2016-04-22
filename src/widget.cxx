@@ -353,9 +353,9 @@ namespace sfe
         target.draw(r);
     }
 
-    ImageWidget::ImageWidget(std::string const & string)
+    ImageWidget::ImageWidget(std::string const & filename)
         :
-        texture_(ResourceManager::global().get_texture(string))
+        texture_(ResourceManager::global().get_texture(filename))
     {
         set_ratio(texture_.getSize().x / static_cast<float>(texture_.getSize().y));
     }

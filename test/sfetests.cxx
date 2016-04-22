@@ -62,7 +62,7 @@ int main()
     unsigned int const HEIGHT = 600;
 
     // Create the screen with some widgets.
-    Screen screen;
+    Screen screen(sf::View({ 0, 0, 1, 1 }));
     create_widgets(screen.get_gui());
 
     // Create a clock to measure the elapsed time per frame.
