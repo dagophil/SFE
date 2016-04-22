@@ -9,10 +9,10 @@ find_package(Boost 1.6.0 COMPONENTS REQUIRED system filesystem)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 
- # SFML
- find_package(SFML REQUIRED system window graphics)
- include_directories(${SFML_INCLUDE_DIR})
- #add_definitions(-DSFML_DYNAMIC)
+# SFML
+find_package(SFML REQUIRED system window graphics)
+include_directories(${SFML_INCLUDE_DIR})
+#add_definitions(-DSFML_DYNAMIC)
 
 # Define a copy makro.
 macro(copyfile tar filename)
@@ -23,3 +23,4 @@ endmacro()
 
 add_subdirectory(src)
 add_subdirectory(test)
+add_subdirectory(examples)

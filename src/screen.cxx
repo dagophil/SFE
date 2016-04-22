@@ -17,10 +17,10 @@ namespace sfe
             // Get the mouse position on the window.
             auto mouse_pos = sf::Mouse::getPosition(window);
 
-            // Update mouseover and hover states of the gui widgets.
-            gui_.update_mouseover(mouse_pos.x / static_cast<float>(window.getSize().x),
+            // Update mouseover states of the gui widgets.
+            auto handled = gui_.update_mouse(mouse_pos.x / static_cast<float>(window.getSize().x),
                                   mouse_pos.y / static_cast<float>(window.getSize().y));
-            auto gui_clicked = gui_.update_hover();
+
 
             // TODO:
             // Update the hover states of the game objects.
@@ -48,6 +48,16 @@ namespace sfe
     Widget const & Screen::get_gui() const
     {
         return gui_;
+    }
+
+    std::vector<std::unique_ptr<GameObject> > & Screen::get_game_objects()
+    {
+        return game_objects_;
+    }
+
+    std::vector<std::unique_ptr<GameObject> > const & Screen::get_game_objects() const
+    {
+        return game_objects_;
     }
 
 } // namespace sfe

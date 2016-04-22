@@ -86,15 +86,9 @@ namespace sfe
         void clear_widgets();
 
         ////////////////////////////////////////////////////////////
-        /// Update the mouseover state.
+        /// Update the mouse and raise mouseover and click events.
         ////////////////////////////////////////////////////////////
-        void update_mouseover(float x, float y);
-
-        ////////////////////////////////////////////////////////////
-        /// Update the hover state. Return true if the widget or a
-        /// subwidget was hovered.
-        ////////////////////////////////////////////////////////////
-        bool update_hover();
+        bool update_mouse(float x, float y);
 
         ////////////////////////////////////////////////////////////
         /// Update the widget and all subwidgets.
@@ -202,9 +196,18 @@ namespace sfe
         bool get_mouseover() const;
 
         ////////////////////////////////////////////////////////////
-        /// Return whether the widget is hovered.
+        /// Return whether clicks are absorbed by this widget.
+        /// If this is true, the click event is not passed onto
+        /// widgets beneath this one.
         ////////////////////////////////////////////////////////////
-        bool get_hovered() const;
+        bool get_absorb_click() const;
+
+        ////////////////////////////////////////////////////////////
+        /// Set whether clicks are absorbed by this widget.
+        /// If this is true, the click event is not passed onto
+        /// widgets beneath this one.
+        ////////////////////////////////////////////////////////////
+        void set_absorb_click(bool absorb_click);
 
         ////////////////////////////////////////////////////////////
         /// Add a callback for the mouse enter event.
@@ -215,16 +218,6 @@ namespace sfe
         /// Add a callback for the mouse leave event.
         ////////////////////////////////////////////////////////////
         void add_mouse_leave_callback(CallbackFunction && f);
-
-        ////////////////////////////////////////////////////////////
-        /// Add a callback for the hover begin event.
-        ////////////////////////////////////////////////////////////
-        void add_hover_begin_callback(CallbackFunction && f);
-
-        ////////////////////////////////////////////////////////////
-        /// Add a callback for the hover end event.
-        ////////////////////////////////////////////////////////////
-        void add_hover_end_callback(CallbackFunction && f);
 
         ////////////////////////////////////////////////////////////
         /// Add a callback for the click begin event.
@@ -244,16 +237,6 @@ namespace sfe
         /// Clear the callbacks for the mouse leave event.
         ////////////////////////////////////////////////////////////
         void clear_mouse_leave_callbacks();
-
-        ////////////////////////////////////////////////////////////
-        /// Clear the callbacks for the hover begin event.
-        ////////////////////////////////////////////////////////////
-        void clear_hover_begin_callbacks();
-
-        ////////////////////////////////////////////////////////////
-        /// Clear the callbacks for the hover end event.
-        ////////////////////////////////////////////////////////////
-        void clear_hover_end_callbacks();
 
         ////////////////////////////////////////////////////////////
         /// Clear the callbacks for the click begin event.
@@ -329,17 +312,16 @@ namespace sfe
         bool mouseover_;
 
         ////////////////////////////////////////////////////////////
-        /// True if the widget rectangle contains the mouse an
-        /// there is no other widget "between" this widget and the
-        /// cursor.
-        ////////////////////////////////////////////////////////////
-        bool hovered_;
-
-        ////////////////////////////////////////////////////////////
         /// True if a mouse button was pressed while the widget was
         /// hovered and the mouse button was not released yet.
         ////////////////////////////////////////////////////////////
         bool mousedown_;
+
+        ////////////////////////////////////////////////////////////
+        /// Whether the click event is absorbed or passed onto
+        /// widgets beneath this one.
+        ////////////////////////////////////////////////////////////
+        bool absorb_click_;
 
         ////////////////////////////////////////////////////////////
         /// The subwidgets.
@@ -355,16 +337,6 @@ namespace sfe
         /// The callbacks for the mouse leave event.
         ////////////////////////////////////////////////////////////
         std::vector<CallbackFunction> mouse_leave_callbacks_;
-
-        ////////////////////////////////////////////////////////////
-        /// The callbacks for the hover begin event.
-        ////////////////////////////////////////////////////////////
-        std::vector<CallbackFunction> hover_begin_callbacks_;
-
-        ////////////////////////////////////////////////////////////
-        /// The callbacks for the hover end event.
-        ////////////////////////////////////////////////////////////
-        std::vector<CallbackFunction> hover_end_callbacks_;
 
         ////////////////////////////////////////////////////////////
         /// The callbacks for the click begin event.

@@ -29,13 +29,23 @@ void create_widgets(sfe::Widget & container)
     w1->set_x(0.5);
     w1->set_y(0.5);
     w1->add_click_begin_callback([](Widget & w) {
-        w.clear_widgets();
+        std::cout << "click begin green" << std::endl;
+    });
+    w1->add_click_end_callback([](Widget & w) {
+        std::cout << "click end green" << std::endl;
     });
 
     // Add the disk image on top of the green.
     auto w2 = std::make_unique<ImageWidget>("disk.png");
     w2->set_scale(Scale::X);
     w2->set_align_x(AlignX::Center);
+    w2->add_click_begin_callback([](Widget & w) {
+        std::cout << "click begin disk" << std::endl;
+    });
+    w2->add_click_end_callback([](Widget & w) {
+        std::cout << "click end disk" << std::endl;
+    });
+    w2->set_absorb_click(true);
     w1->add_widget(std::move(w2));
     
     // Nest the widgets.
@@ -67,7 +77,8 @@ int main()
         // Process window events.
         sfe::Input::global().reset();
         sf::Event event;
-        while (window.pollEvent(event)) {
+        while (window.pollEvent(event))
+        {
             if (event.type == sf::Event::Closed)
             {
                 window.close();

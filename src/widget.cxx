@@ -20,8 +20,8 @@ namespace sfe
         scale_(Scale::None),
         ratio_(1.0f),
         mouseover_(false),
-        hovered_(false),
-        mousedown_(false)
+        mousedown_(false),
+        absorb_click_(false)
     {}
 
     Widget* Widget::add_widget(std::unique_ptr<Widget> w)
@@ -62,84 +62,52 @@ namespace sfe
         widgets_.clear();
     }
 
-    void Widget::update_mouseover(float x, float y)
+    bool Widget::update_mouse(float x, float y)
     {
-        // Save the old mouseover state.
-        auto old_mouseover = mouseover_;
-
         // Update the mouseoverstate.
+        auto old_mouseover = mouseover_;
         auto r = render_rect();
         mouseover_ = r.contains(x, y);
 
         // Fire the mouseover events.
         if (!old_mouseover && mouseover_)
-        {
             for (auto const & f : mouse_enter_callbacks_)
                 f(*this);
-        }
         else if (old_mouseover && !mouseover_)
-        {
             for (auto const & f : mouse_leave_callbacks_)
                 f(*this);
-        }
 
         // Update the subwidgets.
+        bool handled = false;
         x = (x - r.left) / r.width;
         y = (y - r.top) / r.height;
         for (auto const & w : widgets_)
-            w->update_mouseover(x, y);
-    }
+            if (w->update_mouse(x, y))
+                handled = true;
 
-    bool Widget::update_hover()
-    {
-        // Check if a subwidget was hovered.
-        bool sub_hovered = false;
-        for (auto it = widgets_.rbegin(); it != widgets_.rend(); ++it)
+        // Fire the click callbacks.
+        if (!handled)
         {
-            if ((*it)->update_hover())
+            if (mouseover_ && sfe::Input::global().is_pressed(sf::Mouse::Left))
             {
-                sub_hovered = true;
-                break;
+                for (auto const & f : click_begin_callbacks_)
+                    f(*this);
+                mousedown_ = true;
             }
-        }
-
-        // Save the old hover state.
-        auto old_hovered = hovered_;
-
-        // Update the hover state.
-        hovered_ = sub_hovered ? false : mouseover_;
-
-        // Fire the hover events.
-        if (!old_hovered && hovered_)
-        {
-            for (auto const & f : hover_begin_callbacks_)
-                f(*this);
-        }
-        else if (old_hovered && !hovered_)
-        {
-            for (auto const & f : hover_end_callbacks_)
-                f(*this);
-        }
-
-        // Check if a click occured on the widget.
-        if (hovered_ && sfe::Input::global().is_pressed(sf::Mouse::Left))
-        {
-            for (auto const & f : click_begin_callbacks_)
-                f(*this);
-            mousedown_ = true;
-        }
-        if (sfe::Input::global().is_released(sf::Mouse::Left))
-        {
-            if (mousedown_ && hovered_)
+            if (mousedown_ && mouseover_ && sfe::Input::global().is_released(sf::Mouse::Left))
             {
                 for (auto const & f : click_end_callbacks_)
                     f(*this);
             }
-            mousedown_ = false;
         }
+        if (sfe::Input::global().is_released(sf::Mouse::Left))
+            mousedown_ = false;
 
-        // Return whether the widget or a subwidget is hovered.
-        return sub_hovered ? true : hovered_;
+        // Check if the click should be absorbed.
+        if (mouseover_ && absorb_click_)
+            handled = true;
+        return handled;
+
     }
 
     void Widget::update(sf::Time elapsed_time)
@@ -268,9 +236,14 @@ namespace sfe
         return mouseover_;
     }
 
-    bool Widget::get_hovered() const
+    bool Widget::get_absorb_click() const
     {
-        return hovered_;
+        return absorb_click_;
+    }
+
+    void Widget::set_absorb_click(bool absorb_click)
+    {
+        absorb_click_ = absorb_click;
     }
 
     void Widget::add_mouse_enter_callback(CallbackFunction && f)
@@ -281,16 +254,6 @@ namespace sfe
     void Widget::add_mouse_leave_callback(CallbackFunction && f)
     {
         mouse_leave_callbacks_.emplace_back(f);
-    }
-
-    void Widget::add_hover_begin_callback(CallbackFunction && f)
-    {
-        hover_begin_callbacks_.emplace_back(f);
-    }
-
-    void Widget::add_hover_end_callback(CallbackFunction && f)
-    {
-        hover_end_callbacks_.emplace_back(f);
     }
 
     void Widget::add_click_begin_callback(CallbackFunction && f)
@@ -311,16 +274,6 @@ namespace sfe
     void Widget::clear_mouse_leave_callbacks()
     {
         mouse_leave_callbacks_.clear();
-    }
-
-    void Widget::clear_hover_begin_callbacks()
-    {
-        hover_begin_callbacks_.clear();
-    }
-
-    void Widget::clear_hover_end_callbacks()
-    {
-        hover_end_callbacks_.clear();
     }
 
     void Widget::clear_click_begin_callbacks()
