@@ -43,35 +43,35 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         /// Return whether the given key is currently held down.
         ////////////////////////////////////////////////////////////
-        bool is_down(sf::Keyboard::Key k);
+        bool is_down(sf::Keyboard::Key k) const;
 
         ////////////////////////////////////////////////////////////
         /// Return whether the given mouse button is currently held
         /// down.
         ////////////////////////////////////////////////////////////
-        bool is_down(sf::Mouse::Button b);
+        bool is_down(sf::Mouse::Button b) const;
 
         ////////////////////////////////////////////////////////////
         /// Return whether the key was pressed in the last frame.
         ////////////////////////////////////////////////////////////
-        bool is_pressed(sf::Keyboard::Key k);
+        bool is_pressed(sf::Keyboard::Key k) const;
 
         ////////////////////////////////////////////////////////////
         /// Return whether the mouse button was pressed in the last
         /// frame.
         ////////////////////////////////////////////////////////////
-        bool is_pressed(sf::Mouse::Button b);
+        bool is_pressed(sf::Mouse::Button b) const;
 
         ////////////////////////////////////////////////////////////
         /// Return whether the key was released in the last frame.
         ////////////////////////////////////////////////////////////
-        bool is_released(sf::Keyboard::Key k);
+        bool is_released(sf::Keyboard::Key k) const;
 
         ////////////////////////////////////////////////////////////
         /// Return whether the mouse button was released in the last
         /// frame.
         ////////////////////////////////////////////////////////////
-        bool is_released(sf::Mouse::Button b);
+        bool is_released(sf::Mouse::Button b) const;
 
     private:
 

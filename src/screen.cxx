@@ -72,6 +72,25 @@ namespace sfe
         return ptr;
     }
 
+    std::unique_ptr<GameObject> Screen::remove_game_object(GameObject* obj)
+    {
+        auto comp = [obj](auto && objptr)
+        {
+            return objptr.get() == obj;
+        };
+        auto it = std::find_if(game_objects_.begin(), game_objects_.end(), comp);
+        if (it != game_objects_.end())
+        {
+            auto objptr = std::move(*it);
+            game_objects_.erase(it);
+            return objptr;
+        }
+        else
+        {
+            return std::unique_ptr<GameObject>();
+        }
+    }
+
     sf::View & Screen::get_game_view()
     {
         return game_view_;

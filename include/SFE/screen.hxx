@@ -51,6 +51,13 @@ namespace sfe
         GameObject* add_game_object(std::unique_ptr<GameObject> obj);
 
         ////////////////////////////////////////////////////////////
+        /// Remove a game object from the screen.
+        /// For convenience, the object is returned so it can be
+        /// reused.
+        ////////////////////////////////////////////////////////////
+        std::unique_ptr<GameObject> remove_game_object(GameObject* obj);
+
+        ////////////////////////////////////////////////////////////
         /// Return the game view.
         ////////////////////////////////////////////////////////////
         sf::View & get_game_view();

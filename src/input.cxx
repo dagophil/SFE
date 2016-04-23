@@ -56,37 +56,37 @@ namespace sfe
         btn_pressed_[i] = true;
     }
 
-    bool Input::is_down(sf::Keyboard::Key k)
+    bool Input::is_down(sf::Keyboard::Key k) const
     {
         auto i = static_cast<int>(k);
         return key_down_[i];
     }
 
-    bool Input::is_down(sf::Mouse::Button b)
+    bool Input::is_down(sf::Mouse::Button b) const
     {
         auto i = static_cast<int>(b);
         return btn_down_[i];
     }
 
-    bool Input::is_pressed(sf::Keyboard::Key k)
+    bool Input::is_pressed(sf::Keyboard::Key k) const
     {
         auto i = static_cast<int>(k);
         return key_pressed_[i];
     }
 
-    bool Input::is_pressed(sf::Mouse::Button b)
+    bool Input::is_pressed(sf::Mouse::Button b) const
     {
         auto i = static_cast<int>(b);
         return btn_pressed_[i];
     }
 
-    bool Input::is_released(sf::Keyboard::Key k)
+    bool Input::is_released(sf::Keyboard::Key k) const
     {
         auto i = static_cast<int>(k);
         return key_released_[i];
     }
 
-    bool Input::is_released(sf::Mouse::Button b)
+    bool Input::is_released(sf::Mouse::Button b) const
     {
         auto i = static_cast<int>(b);
         return btn_released_[i];

@@ -31,6 +31,7 @@ namespace sfe
             }
             else
             {
+                it->second.setSmooth(true);
                 return it->second;
             }
         }

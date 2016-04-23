@@ -2,9 +2,11 @@
 #define SFE_EXAMPLE_SNAKE_HXX
 
 #include <deque>
+#include <random>
 
 #include <SFE/game.hxx>
 #include <SFE/ndarray.hxx>
+#include <SFE/input.hxx>
 
 // Game constants.
 static float const game_field_width = 2.2f;
@@ -54,10 +56,10 @@ protected:
 private:
 
     ////////////////////////////////////////////////////////////
-    /// A SnakePart holds the GameObject and the position of a
-    /// snake head or body part in field coordinates.
+    /// A FieldObject holds the GameObject and the position of a
+    /// snake part or a food object.
     ////////////////////////////////////////////////////////////
-    struct SnakePart
+    struct FieldObject
     {
         unsigned int x;
         unsigned int y;
@@ -75,6 +77,22 @@ private:
     };
 
     ////////////////////////////////////////////////////////////
+    /// The direction.
+    ////////////////////////////////////////////////////////////
+    enum class Direction
+    {
+        Right = 0,
+        Down,
+        Left,
+        Up
+    };
+
+    ////////////////////////////////////////////////////////////
+    /// Update the direction according to the user input.
+    ////////////////////////////////////////////////////////////
+    void update_direction();
+
+    ////////////////////////////////////////////////////////////
     /// Create the background images.
     ////////////////////////////////////////////////////////////
     void create_background();
@@ -88,11 +106,17 @@ private:
     /// Create a snake head part at the given field coordinates.
     ////////////////////////////////////////////////////////////
     void create_head_part(unsigned int x, unsigned int y);
-
+    
     ////////////////////////////////////////////////////////////
     /// Create a snake body part at the given field coordinates.
     ////////////////////////////////////////////////////////////
     void create_body_part(unsigned int x, unsigned int y);
+
+    ////////////////////////////////////////////////////////////
+    /// Create a food item that is placed on a random empty
+    /// field.
+    ////////////////////////////////////////////////////////////
+    void create_random_food();
 
     ////////////////////////////////////////////////////////////
     /// Stores which fields are currently occupied by the snake
@@ -101,14 +125,34 @@ private:
     sfe::Array2D<FieldType> field_occupied_;
 
     ////////////////////////////////////////////////////////////
+    /// The number of free game fields.
+    ////////////////////////////////////////////////////////////
+    size_t num_free_fields_;
+
+    ////////////////////////////////////////////////////////////
     /// The snake head.
     ////////////////////////////////////////////////////////////
-    SnakePart snake_head_;
+    FieldObject snake_head_;
 
     ////////////////////////////////////////////////////////////
     /// The snake body.
     ////////////////////////////////////////////////////////////
-    std::deque<SnakePart> snake_body_;
+    std::deque<FieldObject> snake_body_;
+
+    ////////////////////////////////////////////////////////////
+    /// The food.
+    ////////////////////////////////////////////////////////////
+    FieldObject food_;
+
+    ////////////////////////////////////////////////////////////
+    /// The random engine.
+    ////////////////////////////////////////////////////////////
+    std::mt19937 rand_engine_;
+
+    ////////////////////////////////////////////////////////////
+    /// The current direction.
+    ////////////////////////////////////////////////////////////
+    Direction current_direction_;
 
 }; // class SnakeGame
 
@@ -116,21 +160,54 @@ template <typename... Args>
 SnakeGame::SnakeGame(Args && ... args)
     :
     Game(args...),
-    field_occupied_(num_fields_x, num_fields_y, FieldType::Empty)
+    field_occupied_(num_fields_x, num_fields_y, FieldType::Empty),
+    num_free_fields_(num_fields_x*num_fields_y),
+    rand_engine_(std::random_device()()),
+    current_direction_(Direction::Right)
 {}
 
 void SnakeGame::init()
 {
     create_background();
     place_snake();
+    create_random_food();
 }
 
 void SnakeGame::update(sf::Time elapsed_time)
 {
+    update_direction();
+
     //// Apply some rotation to make things interesting.
     //total_elapsed_time_ += elapsed_time;
     //auto r = 5 * std::sin(1 * total_elapsed_time_.asSeconds());
     //screen_.get_game_view().setRotation(r);
+}
+
+void SnakeGame::update_direction()
+{   
+    // Read the user input and change the direction variable.
+    auto const & input = sfe::Input::global();
+    if (input.is_pressed(sf::Keyboard::Up))
+        current_direction_ = Direction::Up;
+    if (input.is_pressed(sf::Keyboard::Right))
+        current_direction_ = Direction::Right;
+    if (input.is_pressed(sf::Keyboard::Down))
+        current_direction_ = Direction::Down;
+    if (input.is_pressed(sf::Keyboard::Left))
+        current_direction_ = Direction::Left;
+
+    // Change the direction of the snake head image.
+    auto head_ptr = dynamic_cast<sfe::ImageObject*>(snake_head_.obj);
+    if (current_direction_ == Direction::Left)
+    {
+        head_ptr->set_rotation(0);
+        head_ptr->set_mirror_x(true);
+    }
+    else
+    {
+        head_ptr->set_rotation(90.f * static_cast<int>(current_direction_));
+        head_ptr->set_mirror_x(false);
+    }
 }
 
 void SnakeGame::create_background()
@@ -165,6 +242,7 @@ void SnakeGame::create_head_part(unsigned int x, unsigned int y)
     snake_head_.x = x;
     snake_head_.y = y;
     field_occupied_(x, y) = FieldType::Snake;
+    --num_free_fields_;
 
     // Create the game object and add it to the screen.
     auto const pos = field_to_view(x, y);
@@ -177,10 +255,11 @@ void SnakeGame::create_head_part(unsigned int x, unsigned int y)
 void SnakeGame::create_body_part(unsigned int x, unsigned int y)
 {
     // Create the snake part object and occupy the game field.
-    SnakePart part;
+    FieldObject part;
     part.x = x;
     part.y = y;
     field_occupied_(x, y) = FieldType::Snake;
+    --num_free_fields_;
 
     // Create the game object and add it to the screen.
     auto const pos = field_to_view(x, y);
@@ -191,6 +270,37 @@ void SnakeGame::create_body_part(unsigned int x, unsigned int y)
 
     // Append the snake part to the queue.
     snake_body_.push_back(part);
+}
+
+void SnakeGame::create_random_food()
+{
+    // Find a random position on the field.
+    std::uniform_int_distribution<> rand(0, num_free_fields_-1);
+    auto pos = rand(rand_engine_);
+
+    // Loop over all empty fields until the position is reached.
+    int i = 0;
+    for (size_t y = 0; y < field_occupied_.height(); ++y)
+    {
+        for (size_t x = 0; x < field_occupied_.width(); ++x)
+        {
+            if (field_occupied_(x, y) != FieldType::Empty)
+                continue;
+
+            if (i == pos)
+            {
+                food_.x = x;
+                food_.y = y;
+                auto food_pos = field_to_view(x, y);
+                auto food = std::make_unique<sfe::ImageObject>("strawberry.png");
+                food->set_size(field_width, field_height);
+                food->set_position(food_pos);
+                food_.obj = screen_.add_game_object(std::move(food));
+                return;
+            }
+            ++i;
+        }
+    }
 }
 
 #endif
