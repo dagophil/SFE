@@ -16,6 +16,7 @@ namespace sfe
     void Game::run()
     {
         // Run the main loop.
+        clock_.restart();
         while (window_.isOpen())
         {
             // Process window events.

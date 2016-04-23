@@ -13,13 +13,13 @@ static float const game_field_width = 2.2f;
 static float const game_field_height = 1.55f;
 static float const field_width = 0.05f;
 static float const field_height = 0.05f;
-static unsigned int const num_fields_x = std::lroundf(game_field_width / field_width);
-static unsigned int const num_fields_y = std::lroundf(game_field_height / field_height);
+static int const num_fields_x = std::lroundf(game_field_width / field_width);
+static int const num_fields_y = std::lroundf(game_field_height / field_height);
 
 ////////////////////////////////////////////////////////////
 /// Convert game field coordinates to view coordinates.
 ////////////////////////////////////////////////////////////
-sf::Vector2f field_to_view(unsigned int x, unsigned int y)
+sf::Vector2f field_to_view(int x, int y)
 {
     float const fx = static_cast<float>(num_fields_x);
     float const fy = static_cast<float>(num_fields_y);
@@ -61,8 +61,8 @@ private:
     ////////////////////////////////////////////////////////////
     struct FieldObject
     {
-        unsigned int x;
-        unsigned int y;
+        int x;
+        int y;
         sfe::GameObject* obj;
     };
 
@@ -105,18 +105,23 @@ private:
     ////////////////////////////////////////////////////////////
     /// Create a snake head part at the given field coordinates.
     ////////////////////////////////////////////////////////////
-    void create_head_part(unsigned int x, unsigned int y);
+    void create_head_part(int x, int y);
     
     ////////////////////////////////////////////////////////////
     /// Create a snake body part at the given field coordinates.
     ////////////////////////////////////////////////////////////
-    void create_body_part(unsigned int x, unsigned int y);
+    void create_body_part(int x, int y);
 
     ////////////////////////////////////////////////////////////
     /// Create a food item that is placed on a random empty
     /// field.
     ////////////////////////////////////////////////////////////
     void create_random_food();
+
+    ////////////////////////////////////////////////////////////
+    /// Move the snake.
+    ////////////////////////////////////////////////////////////
+    void make_step();
 
     ////////////////////////////////////////////////////////////
     /// Stores which fields are currently occupied by the snake
@@ -150,9 +155,30 @@ private:
     std::mt19937 rand_engine_;
 
     ////////////////////////////////////////////////////////////
-    /// The current direction.
+    /// The current direction of the snake.
     ////////////////////////////////////////////////////////////
     Direction current_direction_;
+
+    ////////////////////////////////////////////////////////////
+    /// The new direction that considers the user input between
+    /// two steps.
+    ////////////////////////////////////////////////////////////
+    Direction new_direction_;
+
+    ////////////////////////////////////////////////////////////
+    /// The step time.
+    ////////////////////////////////////////////////////////////
+    sf::Time step_time_;
+
+    ////////////////////////////////////////////////////////////
+    /// The time until the next snake step.
+    ////////////////////////////////////////////////////////////
+    sf::Time until_next_step_;
+
+    ////////////////////////////////////////////////////////////
+    /// Whether the snake is currently running.
+    ////////////////////////////////////////////////////////////
+    bool running_;
 
 }; // class SnakeGame
 
@@ -163,7 +189,11 @@ SnakeGame::SnakeGame(Args && ... args)
     field_occupied_(num_fields_x, num_fields_y, FieldType::Empty),
     num_free_fields_(num_fields_x*num_fields_y),
     rand_engine_(std::random_device()()),
-    current_direction_(Direction::Right)
+    current_direction_(Direction::Right),
+    new_direction_(Direction::Right),
+    step_time_(sf::seconds(0.5f)),
+    until_next_step_(step_time_),
+    running_(true)
 {}
 
 void SnakeGame::init()
@@ -175,7 +205,19 @@ void SnakeGame::init()
 
 void SnakeGame::update(sf::Time elapsed_time)
 {
-    update_direction();
+    if (running_)
+    {
+        // Update the direction according to the user input.
+        update_direction();
+
+        // Make a step.
+        until_next_step_ -= elapsed_time;
+        if (until_next_step_ < sf::Time::Zero)
+        {
+            make_step();
+            until_next_step_ += step_time_;
+        }
+    }
 
     //// Apply some rotation to make things interesting.
     //total_elapsed_time_ += elapsed_time;
@@ -186,26 +228,28 @@ void SnakeGame::update(sf::Time elapsed_time)
 void SnakeGame::update_direction()
 {   
     // Read the user input and change the direction variable.
+    // Make sure that the snake does not go backwards.
+    // TODO: Maybe use input.is_down().
     auto const & input = sfe::Input::global();
-    if (input.is_pressed(sf::Keyboard::Up))
-        current_direction_ = Direction::Up;
-    if (input.is_pressed(sf::Keyboard::Right))
-        current_direction_ = Direction::Right;
-    if (input.is_pressed(sf::Keyboard::Down))
-        current_direction_ = Direction::Down;
-    if (input.is_pressed(sf::Keyboard::Left))
-        current_direction_ = Direction::Left;
+    if (input.is_pressed(sf::Keyboard::Up) && current_direction_ != Direction::Down)
+        new_direction_ = Direction::Up;
+    if (input.is_pressed(sf::Keyboard::Right) && current_direction_ != Direction::Left)
+        new_direction_ = Direction::Right;
+    if (input.is_pressed(sf::Keyboard::Down) && current_direction_ != Direction::Up)
+        new_direction_ = Direction::Down;
+    if (input.is_pressed(sf::Keyboard::Left) && current_direction_ != Direction::Right)
+        new_direction_ = Direction::Left;
 
     // Change the direction of the snake head image.
     auto head_ptr = dynamic_cast<sfe::ImageObject*>(snake_head_.obj);
-    if (current_direction_ == Direction::Left)
+    if (new_direction_ == Direction::Left)
     {
         head_ptr->set_rotation(0);
         head_ptr->set_mirror_x(true);
     }
     else
     {
-        head_ptr->set_rotation(90.f * static_cast<int>(current_direction_));
+        head_ptr->set_rotation(90.f * static_cast<int>(new_direction_));
         head_ptr->set_mirror_x(false);
     }
 }
@@ -236,7 +280,7 @@ void SnakeGame::place_snake()
         create_body_part(snake_head_.x - 1 - i, snake_head_.y);
 }
 
-void SnakeGame::create_head_part(unsigned int x, unsigned int y)
+void SnakeGame::create_head_part(int x, int y)
 {
     // Create the snake part object and occupy the game field.
     snake_head_.x = x;
@@ -252,7 +296,7 @@ void SnakeGame::create_head_part(unsigned int x, unsigned int y)
     snake_head_.obj = screen_.add_game_object(std::move(head));
 }
 
-void SnakeGame::create_body_part(unsigned int x, unsigned int y)
+void SnakeGame::create_body_part(int x, int y)
 {
     // Create the snake part object and occupy the game field.
     FieldObject part;
@@ -300,6 +344,53 @@ void SnakeGame::create_random_food()
             }
             ++i;
         }
+    }
+}
+
+void SnakeGame::make_step()
+{
+    // Find the new head position.
+    current_direction_ = new_direction_;
+    int new_x = snake_head_.x;
+    int new_y = snake_head_.y;
+    if (current_direction_ == Direction::Up)
+        --new_y;
+    else if (current_direction_ == Direction::Down)
+        ++new_y;
+    else if (current_direction_ == Direction::Left)
+        --new_x;
+    else
+        ++new_x;
+
+    // Check if the new head field is blocked or the snake went out of bounds.
+    if (new_x < 0 || new_x >= num_fields_x ||
+        new_y < 0 || new_y >= num_fields_y ||
+        field_occupied_(new_x, new_y) == FieldType::Snake)
+    {
+        running_ = false;
+        std::cout << "You lose." << std::endl;
+    }
+    else // The new head field is free.
+    {
+        // If the new head field does not contain food, the tail moves.
+        bool const got_food = field_occupied_(new_x, new_y) == FieldType::Food;
+        if (!got_food)
+        {
+            // Move the old tail to the place were the head was.
+            auto back = snake_body_.back();
+            snake_body_.pop_back();
+            field_occupied_(back.x, back.y) = FieldType::Empty;
+            back.x = snake_head_.x;
+            back.y = snake_head_.y;
+            back.obj->set_position(field_to_view(back.x, back.y));
+            snake_body_.push_front(back);
+        }
+
+        // Move the head to the new place.
+        field_occupied_(new_x, new_y) = FieldType::Snake;
+        snake_head_.x = new_x;
+        snake_head_.y = new_y;
+        snake_head_.obj->set_position(field_to_view(new_x, new_y));
     }
 }
 
