@@ -61,6 +61,13 @@ private:
     ////////////////////////////////////////////////////////////
     struct FieldObject
     {
+        FieldObject()
+            :
+            x(0),
+            y(0),
+            obj(nullptr)
+        {}
+
         int x;
         int y;
         sfe::GameObject* obj;
@@ -110,7 +117,7 @@ private:
     ////////////////////////////////////////////////////////////
     /// Create a snake body part at the given field coordinates.
     ////////////////////////////////////////////////////////////
-    void create_body_part(int x, int y);
+    void create_body_part(int x, int y, bool back = true);
 
     ////////////////////////////////////////////////////////////
     /// Create a food item that is placed on a random empty
@@ -191,7 +198,7 @@ SnakeGame::SnakeGame(Args && ... args)
     rand_engine_(std::random_device()()),
     current_direction_(Direction::Right),
     new_direction_(Direction::Right),
-    step_time_(sf::seconds(0.5f)),
+    step_time_(sf::seconds(0.2f)),
     until_next_step_(step_time_),
     running_(true)
 {}
@@ -296,7 +303,7 @@ void SnakeGame::create_head_part(int x, int y)
     snake_head_.obj = screen_.add_game_object(std::move(head));
 }
 
-void SnakeGame::create_body_part(int x, int y)
+void SnakeGame::create_body_part(int x, int y, bool back)
 {
     // Create the snake part object and occupy the game field.
     FieldObject part;
@@ -313,7 +320,10 @@ void SnakeGame::create_body_part(int x, int y)
     part.obj = screen_.add_game_object(std::move(body));
 
     // Append the snake part to the queue.
-    snake_body_.push_back(part);
+    if (back)
+        snake_body_.push_back(part);
+    else
+        snake_body_.push_front(part);
 }
 
 void SnakeGame::create_random_food()
@@ -335,11 +345,23 @@ void SnakeGame::create_random_food()
             {
                 food_.x = x;
                 food_.y = y;
+                field_occupied_(x, y) = FieldType::Food;
                 auto food_pos = field_to_view(x, y);
-                auto food = std::make_unique<sfe::ImageObject>("strawberry.png");
-                food->set_size(field_width, field_height);
-                food->set_position(food_pos);
-                food_.obj = screen_.add_game_object(std::move(food));
+
+                if (food_.obj != nullptr)
+                {
+                    // There already is a food object, so just move it.
+                    food_.obj->set_position(food_pos);
+                }
+                else
+                {
+                    // Create a new food object.
+                    auto food = std::make_unique<sfe::ImageObject>("strawberry.png");
+                    food->set_size(field_width, field_height);
+                    food->set_position(food_pos);
+                    food_.obj = screen_.add_game_object(std::move(food));
+                }
+
                 return;
             }
             ++i;
@@ -370,11 +392,16 @@ void SnakeGame::make_step()
         running_ = false;
         std::cout << "You lose." << std::endl;
     }
-    else // The new head field is free.
+    else // The new head field is empty or food, so the snake can be moved.
     {
         // If the new head field does not contain food, the tail moves.
         bool const got_food = field_occupied_(new_x, new_y) == FieldType::Food;
-        if (!got_food)
+        if (got_food)
+        {
+            // Spawn a new body part were the head was.
+            create_body_part(snake_head_.x, snake_head_.y, false);
+        }
+        else
         {
             // Move the old tail to the place were the head was.
             auto back = snake_body_.back();
@@ -391,6 +418,10 @@ void SnakeGame::make_step()
         snake_head_.x = new_x;
         snake_head_.y = new_y;
         snake_head_.obj->set_position(field_to_view(new_x, new_y));
+
+        // All snake fields are updated, so eventually, a new food can be created.
+        if (got_food)
+            create_random_food();
     }
 }
 
