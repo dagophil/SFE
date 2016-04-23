@@ -9,7 +9,6 @@
 
 namespace sfe
 {
-
     ////////////////////////////////////////////////////////////
     /// The resource manager ensures that files such as images,
     /// sounds, etc. are loaded only once.

@@ -65,14 +65,11 @@ namespace sfe
         return gui_;
     }
 
-    std::vector<std::unique_ptr<GameObject> > & Screen::get_game_objects()
+    GameObject* Screen::add_game_object(std::unique_ptr<GameObject> obj)
     {
-        return game_objects_;
-    }
-
-    std::vector<std::unique_ptr<GameObject> > const & Screen::get_game_objects() const
-    {
-        return game_objects_;
+        auto ptr = obj.get();
+        game_objects_.push_back(std::move(obj));
+        return ptr;
     }
 
     sf::View & Screen::get_game_view()

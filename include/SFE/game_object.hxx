@@ -44,6 +44,11 @@ namespace sfe
         void set_position(sf::Vector2f const & position);
 
         ////////////////////////////////////////////////////////////
+        /// Set the position.
+        ////////////////////////////////////////////////////////////
+        void set_position(float x, float y);
+
+        ////////////////////////////////////////////////////////////
         /// Return the size.
         ////////////////////////////////////////////////////////////
         sf::Vector2f const & get_size() const;
@@ -132,6 +137,7 @@ namespace sfe
         sf::Texture const & texture_;
 
     }; // class ImageObject
-}
+
+} // namespace sfe
 
 #endif

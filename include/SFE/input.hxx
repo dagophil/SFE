@@ -7,7 +7,6 @@
 
 namespace sfe
 {
-
     ////////////////////////////////////////////////////////////
     /// The keyboard class keeps track of the keys that were
     /// pressed since the last frame.
@@ -108,7 +107,7 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         std::array<bool, sf::Mouse::ButtonCount> btn_released_;
 
-    };
+    }; // class Input
 
 } // namespace sfe
 

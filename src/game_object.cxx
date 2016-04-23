@@ -27,6 +27,12 @@ namespace sfe
         position_ = position;
     }
 
+    void GameObject::set_position(float x, float y)
+    {
+        position_.x = x;
+        position_.y = y;
+    }
+
     sf::Vector2f const & GameObject::get_size() const
     {
         return size_;
@@ -76,7 +82,8 @@ namespace sfe
     void ImageObject::render(sf::RenderTarget & target) const
     {
         sf::Sprite spr(texture_);
-        spr.setPosition(get_position());
+        spr.setOrigin(0.5f * texture_.getSize().x, 0.5f * texture_.getSize().y);
+        spr.setPosition(get_position().x, get_position().y);
         spr.setRotation(get_rotation());
         spr.setScale(get_size().x / static_cast<float>(texture_.getSize().x),
                      get_size().y / static_cast<float>(texture_.getSize().y));

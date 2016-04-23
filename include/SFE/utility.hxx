@@ -3,7 +3,6 @@
 
 namespace sfe
 {
-
     ////////////////////////////////////////////////////////////
     /// Return the absolute path of the current working
     /// directory.

@@ -6,3 +6,4 @@ target_link_libraries(snake
 copyfile(snake camel_bg.jpg)
 copyfile(snake snake_head.png)
 copyfile(snake snake_body.png)
+copyfile(snake frame.png)
