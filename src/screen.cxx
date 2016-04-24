@@ -48,11 +48,11 @@ namespace sfe
 
     void Screen::render(sf::RenderTarget & target) const
     {
-        target.setView({ { 0.5f, 0.5f }, { 1.0f, 1.0f } });
-        gui_.render(target);
         target.setView(game_view_);
         for (auto const & obj : game_objects_)
             obj->render(target);
+        target.setView({ { 0.5f, 0.5f },{ 1.0f, 1.0f } });
+        gui_.render(target);
     }
 
     Widget & Screen::get_gui()
@@ -89,6 +89,11 @@ namespace sfe
         {
             return std::unique_ptr<GameObject>();
         }
+    }
+
+    void Screen::clear_game_objects()
+    {
+        game_objects_.clear();
     }
 
     sf::View & Screen::get_game_view()

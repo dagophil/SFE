@@ -100,14 +100,10 @@ private:
     void update_direction();
 
     ////////////////////////////////////////////////////////////
-    /// Create the background images.
+    /// Update the step time according to the number of
+    /// collected food items.
     ////////////////////////////////////////////////////////////
-    void create_background();
-
-    ////////////////////////////////////////////////////////////
-    /// Place the first snake.
-    ////////////////////////////////////////////////////////////
-    void place_snake();
+    void update_step_time();
 
     ////////////////////////////////////////////////////////////
     /// Create a snake head part at the given field coordinates.
@@ -120,21 +116,32 @@ private:
     void create_body_part(int x, int y, bool back = true);
 
     ////////////////////////////////////////////////////////////
-    /// Create a food item that is placed on a random empty
-    /// field.
+    /// Return the position of the snake head after user input
+    /// was considered.
     ////////////////////////////////////////////////////////////
-    void create_random_food();
+    sf::Vector2i get_new_head() const;
 
     ////////////////////////////////////////////////////////////
     /// Move the snake.
     ////////////////////////////////////////////////////////////
-    void make_step();
+    void move_snake(bool got_food, sf::Vector2i const & new_head_pos);
+
+    ////////////////////////////////////////////////////////////
+    /// Create a food item that is placed on a random empty
+    /// field.
+    ////////////////////////////////////////////////////////////
+    void spawn_food();
+
+    ////////////////////////////////////////////////////////////
+    /// Stop the game loop and show some message.
+    ////////////////////////////////////////////////////////////
+    void game_over();
 
     ////////////////////////////////////////////////////////////
     /// Stores which fields are currently occupied by the snake
     /// body.
     ////////////////////////////////////////////////////////////
-    sfe::Array2D<FieldType> field_occupied_;
+    sfe::Array2D<FieldType> fields_;
 
     ////////////////////////////////////////////////////////////
     /// The number of free game fields.
@@ -187,31 +194,121 @@ private:
     ////////////////////////////////////////////////////////////
     bool running_;
 
+    ////////////////////////////////////////////////////////////
+    /// Counter for all foods that were collected.
+    ////////////////////////////////////////////////////////////
+    int food_counter_;
+
+    ////////////////////////////////////////////////////////////
+    /// The difficulty.
+    ////////////////////////////////////////////////////////////
+    bool easymode_;
+
+    ////////////////////////////////////////////////////////////
+    /// This flag is set to true once the difficulty has been
+    /// chosen.
+    ////////////////////////////////////////////////////////////
+    bool chose_difficulty_;
+
 }; // class SnakeGame
 
 template <typename... Args>
 SnakeGame::SnakeGame(Args && ... args)
     :
     Game(args...),
-    field_occupied_(num_fields_x, num_fields_y, FieldType::Empty),
-    num_free_fields_(num_fields_x*num_fields_y),
-    rand_engine_(std::random_device()()),
-    current_direction_(Direction::Right),
-    new_direction_(Direction::Right),
-    step_time_(sf::seconds(0.2f)),
-    until_next_step_(step_time_),
-    running_(true)
+    fields_(num_fields_x, num_fields_y, FieldType::Empty),
+    rand_engine_(std::random_device()())
 {}
 
 void SnakeGame::init()
 {
-    create_background();
-    place_snake();
-    create_random_food();
+    using namespace sfe;
+
+    std::fill(fields_.begin(), fields_.end(), FieldType::Empty);
+    num_free_fields_ = num_fields_x*num_fields_y;
+    snake_head_ = FieldObject();
+    snake_body_.clear();
+    food_ = FieldObject();
+    current_direction_ = Direction::Right;
+    new_direction_ = Direction::Right;
+    step_time_ = sf::seconds(0.4f);
+    until_next_step_ = step_time_;
+    running_ = false;
+    food_counter_ = 0;
+    easymode_ = true;
+    chose_difficulty_ = false;
+
+    // Create the background image.
+    auto const ratio = screen_.get_game_view().getSize().x / screen_.get_game_view().getSize().y;
+    auto bg = std::make_unique<ImageObject>("camel_bg.jpg");
+    bg->set_z_index(-2);
+    bg->set_size(2 * ratio, 2);
+    screen_.add_game_object(std::move(bg));
+
+    // Create the borders of the game field.
+    auto field_border = std::make_unique<ImageObject>("frame.png");
+    field_border->set_z_index(-1);
+    field_border->set_size(game_field_width * 1.11286407767f, game_field_height * 1.16006884682f);
+    screen_.add_game_object(std::move(field_border));
+
+    // Place the initial snake parts.
+    create_head_part(num_fields_x / 3, num_fields_y / 2);
+    for (int i = 0; i < 3; ++i)
+        create_body_part(snake_head_.x - 1 - i, snake_head_.y);
+
+    // Spawn the first food item.
+    spawn_food();
+
+    // Create the widgets for the difficulty selector.
+    auto text_frame = std::make_unique<ImageWidget>("text_frame.png");
+    text_frame->set_align_x(AlignX::Center);
+    text_frame->set_align_y(AlignY::Center);
+    text_frame->set_height(0.2f);
+    text_frame->set_scale(Scale::X);
+    text_frame->set_y(-0.1f);
+    auto frame_ptr = screen_.get_gui().add_widget(std::move(text_frame));
+
+    auto easy = std::make_unique<ImageWidget>("easy.png");
+    easy->set_align_x(AlignX::Center);
+    easy->set_align_y(AlignY::Center);
+    easy->set_height(0.2f);
+    easy->set_scale(Scale::X);
+    easy->set_y(-0.1f);
+    easy->add_mouse_enter_callback([frame_ptr](Widget & w) {
+        frame_ptr->set_y(-0.1f);
+    });
+    easy->add_click_end_callback([this](Widget & w) {
+        easymode_ = true;
+        chose_difficulty_ = true;
+    });
+    screen_.get_gui().add_widget(std::move(easy));
+
+    auto hard = std::make_unique<ImageWidget>("hard.png");
+    hard->set_align_x(AlignX::Center);
+    hard->set_align_y(AlignY::Center);
+    hard->set_height(0.2f);
+    hard->set_scale(Scale::X);
+    hard->set_y(0.1f);
+    hard->add_mouse_enter_callback([frame_ptr](Widget & w) {
+        frame_ptr->set_y(0.1f);
+    });
+    hard->add_click_end_callback([this](Widget & w) {
+        easymode_ = false;
+        chose_difficulty_ = true;
+    });
+    screen_.get_gui().add_widget(std::move(hard));
 }
 
 void SnakeGame::update(sf::Time elapsed_time)
 {
+    if (!running_ && chose_difficulty_)
+    {
+        if (!easymode_)
+            step_time_ = sf::seconds(0.1f);
+        screen_.get_gui().clear_widgets();
+        running_ = true;
+    }
+
     if (running_)
     {
         // Update the direction according to the user input.
@@ -221,7 +318,30 @@ void SnakeGame::update(sf::Time elapsed_time)
         until_next_step_ -= elapsed_time;
         if (until_next_step_ < sf::Time::Zero)
         {
-            make_step();
+            // Check if the snake collides with itself or the boundary.
+            auto const new_head = get_new_head();
+            if (new_head.x < 0 || new_head.x >= num_fields_x ||
+                new_head.y < 0 || new_head.y >= num_fields_y ||
+                fields_(new_head.x, new_head.y) == FieldType::Snake)
+            {
+                game_over();
+            }
+            else
+            {
+                // Move the snake and spawn an additional body part if food was collected.
+                bool const got_food = fields_(new_head.x, new_head.y) == FieldType::Food;
+                move_snake(got_food, new_head);
+
+                // Spawn a new food.
+                if (got_food)
+                {
+                    ++food_counter_;
+                    spawn_food();
+                    step_time_ = 0.9f * (step_time_ - sf::seconds(0.04f)) + sf::seconds(0.04f);
+                }
+            }
+
+            // Update the step time.
             until_next_step_ += step_time_;
         }
     }
@@ -261,38 +381,12 @@ void SnakeGame::update_direction()
     }
 }
 
-void SnakeGame::create_background()
-{
-    using namespace sfe;
-    
-    auto const ratio = screen_.get_game_view().getSize().x / screen_.get_game_view().getSize().y;
-
-    // Create the background.
-    auto bg = std::make_unique<ImageObject>("camel_bg.jpg");
-    bg->set_z_index(-2);
-    bg->set_size(2 * ratio, 2);
-    screen_.add_game_object(std::move(bg));
-
-    // Create the frame for the game field.
-    auto frame = std::make_unique<ImageObject>("frame.png");
-    frame->set_z_index(-1);
-    frame->set_size(game_field_width * 1.11286407767f, game_field_height * 1.16006884682f);
-    screen_.add_game_object(std::move(frame));
-}
-
-void SnakeGame::place_snake()
-{
-    create_head_part(num_fields_x / 3, num_fields_y / 2);
-    for (int i = 0; i < 3; ++i)
-        create_body_part(snake_head_.x - 1 - i, snake_head_.y);
-}
-
 void SnakeGame::create_head_part(int x, int y)
 {
     // Create the snake part object and occupy the game field.
     snake_head_.x = x;
     snake_head_.y = y;
-    field_occupied_(x, y) = FieldType::Snake;
+    fields_(x, y) = FieldType::Snake;
     --num_free_fields_;
 
     // Create the game object and add it to the screen.
@@ -309,7 +403,7 @@ void SnakeGame::create_body_part(int x, int y, bool back)
     FieldObject part;
     part.x = x;
     part.y = y;
-    field_occupied_(x, y) = FieldType::Snake;
+    fields_(x, y) = FieldType::Snake;
     --num_free_fields_;
 
     // Create the game object and add it to the screen.
@@ -326,7 +420,51 @@ void SnakeGame::create_body_part(int x, int y, bool back)
         snake_body_.push_front(part);
 }
 
-void SnakeGame::create_random_food()
+sf::Vector2i SnakeGame::get_new_head() const
+{
+    int x = snake_head_.x;
+    int y = snake_head_.y;
+    if (new_direction_ == Direction::Up)
+        --y;
+    else if (new_direction_ == Direction::Down)
+        ++y;
+    else if (new_direction_ == Direction::Left)
+        --x;
+    else
+        ++x;
+    return{ x, y };
+}
+
+void SnakeGame::move_snake(bool got_food, sf::Vector2i const & new_head_pos)
+{
+    // Update the direction variable.
+    current_direction_ = new_direction_;
+
+    // If food was collected, just spawn a new body part were the head was.
+    // Otherwise, move a body part from the back of the snake to the front.
+    if (got_food)
+    {
+        create_body_part(snake_head_.x, snake_head_.y, false);
+    }
+    else
+    {
+        auto back = snake_body_.back();
+        snake_body_.pop_back();
+        fields_(back.x, back.y) = FieldType::Empty;
+        back.x = snake_head_.x;
+        back.y = snake_head_.y;
+        back.obj->set_position(field_to_view(back.x, back.y));
+        snake_body_.push_front(back);
+    }
+
+    // Move the snake head.
+    fields_(new_head_pos.x, new_head_pos.y) = FieldType::Snake;
+    snake_head_.x = new_head_pos.x;
+    snake_head_.y = new_head_pos.y;
+    snake_head_.obj->set_position(field_to_view(new_head_pos.x, new_head_pos.y));
+}
+
+void SnakeGame::spawn_food()
 {
     // Find a random position on the field.
     std::uniform_int_distribution<> rand(0, num_free_fields_-1);
@@ -334,18 +472,18 @@ void SnakeGame::create_random_food()
 
     // Loop over all empty fields until the position is reached.
     int i = 0;
-    for (size_t y = 0; y < field_occupied_.height(); ++y)
+    for (size_t y = 0; y < fields_.height(); ++y)
     {
-        for (size_t x = 0; x < field_occupied_.width(); ++x)
+        for (size_t x = 0; x < fields_.width(); ++x)
         {
-            if (field_occupied_(x, y) != FieldType::Empty)
+            if (fields_(x, y) != FieldType::Empty)
                 continue;
 
             if (i == pos)
             {
                 food_.x = x;
                 food_.y = y;
-                field_occupied_(x, y) = FieldType::Food;
+                fields_(x, y) = FieldType::Food;
                 auto food_pos = field_to_view(x, y);
 
                 if (food_.obj != nullptr)
@@ -369,60 +507,13 @@ void SnakeGame::create_random_food()
     }
 }
 
-void SnakeGame::make_step()
+void SnakeGame::game_over()
 {
-    // Find the new head position.
-    current_direction_ = new_direction_;
-    int new_x = snake_head_.x;
-    int new_y = snake_head_.y;
-    if (current_direction_ == Direction::Up)
-        --new_y;
-    else if (current_direction_ == Direction::Down)
-        ++new_y;
-    else if (current_direction_ == Direction::Left)
-        --new_x;
-    else
-        ++new_x;
+    std::cout << "Game over." << std::endl;
+    std::cout << "You collected " << food_counter_ << " food." << std::endl;
 
-    // Check if the new head field is blocked or the snake went out of bounds.
-    if (new_x < 0 || new_x >= num_fields_x ||
-        new_y < 0 || new_y >= num_fields_y ||
-        field_occupied_(new_x, new_y) == FieldType::Snake)
-    {
-        running_ = false;
-        std::cout << "You lose." << std::endl;
-    }
-    else // The new head field is empty or food, so the snake can be moved.
-    {
-        // If the new head field does not contain food, the tail moves.
-        bool const got_food = field_occupied_(new_x, new_y) == FieldType::Food;
-        if (got_food)
-        {
-            // Spawn a new body part were the head was.
-            create_body_part(snake_head_.x, snake_head_.y, false);
-        }
-        else
-        {
-            // Move the old tail to the place were the head was.
-            auto back = snake_body_.back();
-            snake_body_.pop_back();
-            field_occupied_(back.x, back.y) = FieldType::Empty;
-            back.x = snake_head_.x;
-            back.y = snake_head_.y;
-            back.obj->set_position(field_to_view(back.x, back.y));
-            snake_body_.push_front(back);
-        }
-
-        // Move the head to the new place.
-        field_occupied_(new_x, new_y) = FieldType::Snake;
-        snake_head_.x = new_x;
-        snake_head_.y = new_y;
-        snake_head_.obj->set_position(field_to_view(new_x, new_y));
-
-        // All snake fields are updated, so eventually, a new food can be created.
-        if (got_food)
-            create_random_food();
-    }
+    screen_.clear_game_objects();
+    init();
 }
 
 #endif

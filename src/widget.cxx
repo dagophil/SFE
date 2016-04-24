@@ -14,6 +14,7 @@ namespace sfe
     Widget::Widget()
         :
         rect_({0.0f, 0.0f, 1.0f, 1.0f}),
+        visible_(true),
         z_index_(0),
         align_x_(AlignX::Left),
         align_y_(AlignY::Top),
@@ -120,25 +121,28 @@ namespace sfe
 
     void Widget::render(sf::RenderTarget & target) const
     {
-        // Save the view.
-        auto const old_view = target.getView();
-        auto const & center = old_view.getCenter();
-        auto const & size = old_view.getSize();
+        if (visible_)
+        {
+            // Save the view.
+            auto const old_view = target.getView();
+            auto const & center = old_view.getCenter();
+            auto const & size = old_view.getSize();
 
-        // Assign the new view.
-        auto r = render_rect();
-        sf::View view;
-        view.setSize({ size.x / r.width, size.y / r.height });
-        view.setCenter({ (center.x - r.left) / r.width, (center.y - r.top) / r.height });
-        target.setView(view);
+            // Assign the new view.
+            auto r = render_rect();
+            sf::View view;
+            view.setSize({ size.x / r.width, size.y / r.height });
+            view.setCenter({ (center.x - r.left) / r.width, (center.y - r.top) / r.height });
+            target.setView(view);
 
-        // Render the widget and the subwidgets.
-        render_impl(target);
-        for (auto const & w : widgets_)
-            w->render(target);
+            // Render the widget and the subwidgets.
+            render_impl(target);
+            for (auto const & w : widgets_)
+                w->render(target);
 
-        // Restore the old view.
-        target.setView(old_view);
+            // Restore the old view.
+            target.setView(old_view);
+        }
     }
 
     float Widget::get_x() const
@@ -179,6 +183,16 @@ namespace sfe
     void Widget::set_height(float h)
     {
         rect_.height = h;
+    }
+
+    bool Widget::get_visible() const
+    {
+        return visible_;
+    }
+
+    void Widget::set_visible(bool b)
+    {
+        visible_ = b;
     }
 
     int Widget::get_z_index() const
