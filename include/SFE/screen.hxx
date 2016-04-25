@@ -5,6 +5,7 @@
 
 #include "game_object.hxx"
 #include "widget.hxx"
+#include "event_manager.hxx"
 
 namespace sfe
 {
@@ -19,6 +20,11 @@ namespace sfe
         /// Construct a screen with the given game view.
         ////////////////////////////////////////////////////////////
         Screen(sf::View game_view);
+
+        ////////////////////////////////////////////////////////////
+        /// Virtual default destructor.
+        ////////////////////////////////////////////////////////////
+        virtual ~Screen() = default;
 
         ////////////////////////////////////////////////////////////
         /// Update the gui and the game objects.
@@ -77,7 +83,39 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         void set_game_view(sf::View const & view);
 
+        ////////////////////////////////////////////////////////////
+        /// Add an event listener.
+        ////////////////////////////////////////////////////////////
+        void add_listener(std::unique_ptr<Listener> listener);
+
+        ////////////////////////////////////////////////////////////
+        /// Create a listener with the given callback and register
+        /// it to all events in args.
+        ////////////////////////////////////////////////////////////
+        template <typename... Args>
+        void create_and_register_listener(Listener::Callback f, Args && ... args);
+
+        ////////////////////////////////////////////////////////////
+        /// Remove all event listeners.
+        ////////////////////////////////////////////////////////////
+        void clear_listeners();
+
+        ////////////////////////////////////////////////////////////
+        /// The initialization function.
+        ////////////////////////////////////////////////////////////
+        std::function<void()> init_;
+
+        ////////////////////////////////////////////////////////////
+        /// The update function.
+        ////////////////////////////////////////////////////////////
+        std::function<void(sf::Time)> update_;
+
     private:
+
+        ////////////////////////////////////////////////////////////
+        /// The game view.
+        ////////////////////////////////////////////////////////////
+        sf::View game_view_;
 
         ////////////////////////////////////////////////////////////
         /// The game objects.
@@ -90,11 +128,21 @@ namespace sfe
         Widget gui_;
 
         ////////////////////////////////////////////////////////////
-        /// The game view.
+        /// A container for event listeners.
         ////////////////////////////////////////////////////////////
-        sf::View game_view_;
+        std::vector<std::unique_ptr<Listener> > listeners_;
 
     }; // class Screen
+
+    template <typename... Args>
+    inline void Screen::create_and_register_listener(Listener::Callback f, Args && ... args)
+    {
+        auto listener = std::make_unique<Listener>(f);
+        std::vector<Event> const events = { args... };
+        for (auto const & ev : events)
+            EventManager::global().register_listener(*listener, ev);
+        add_listener(std::move(listener));
+    }
 
 } // namespace sfe
 

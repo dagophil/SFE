@@ -314,6 +314,11 @@ namespace sfe
         click_end_callbacks_.clear();
     }
 
+    void Widget::add_listener(std::unique_ptr<Listener> listener)
+    {
+        listeners_.push_back(std::move(listener));
+    }
+
     void Widget::update_impl(sf::Time elapsed_time)
     {}
 

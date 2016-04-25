@@ -21,7 +21,7 @@ macro(copyfile tar filename)
                    ${CMAKE_CURRENT_SOURCE_DIR}/${filename} ${CMAKE_CURRENT_BINARY_DIR}/${filename})
 endmacro()
 
-#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DCHECKEVENTTYPE")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DCHECKEVENTTYPE")
 
 add_subdirectory(src)
 add_subdirectory(test)

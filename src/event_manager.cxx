@@ -20,7 +20,7 @@ namespace sfe
     //    detail::registered_events().emplace(std::forward<Event>(event));
     //}
 
-    Listener::Listener(Callback && f)
+    Listener::Listener(Callback f)
         :
         callback_(f)
     {}
@@ -43,7 +43,7 @@ namespace sfe
         );
     }
 
-    void Listener::set_callback(Callback && f)
+    void Listener::set_callback(Callback f)
     {
         callback_ = f;
     }
@@ -73,6 +73,10 @@ namespace sfe
 
     void EventManager::register_listener(Listener & listener, Event const & event)
     {
+#ifdef CHECKEVENTTYPE
+        if (registered_events_.count(event) == 0)
+            throw std::runtime_error("EventManager::register_listener(): Tried to register a listener for an unregistered event.");
+#endif
         listener.registers_.push_back({ this, event });
         listeners_[event].push_back(&listener);
     }
@@ -90,6 +94,10 @@ namespace sfe
 
     void EventManager::enqueue(Event && event)
     {
+#ifdef CHECKEVENTTYPE
+        if (registered_events_.count(event) == 0)
+            throw std::runtime_error("EventManager::enqueue(): Tried to post an unregistered event.");
+#endif
         event_queue_.push(std::forward<Event>(event));
     }
 
@@ -107,6 +115,11 @@ namespace sfe
             }
             event_queue_.pop();
         }
+    }
+
+    void EventManager::register_event(Event const & event)
+    {
+        registered_events_.insert(event);
     }
 
     void EventManager::remove(Listener* listener, Event const & event)

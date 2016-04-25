@@ -1,24 +1,36 @@
 #include "SFE/game.hxx"
 #include "SFE/input.hxx"
+#include "SFE/event_manager.hxx"
 
 namespace sfe
 {
     Game::Game(unsigned int width, unsigned int height, std::string const & title, sf::Uint32 style)
         :
-        screen_(sf::View()),
         window_(sf::VideoMode(width, height), title, style)
-    {
-        sf::Style::Close;
-        float const ratio = width / static_cast<float>(height);
-        screen_.set_game_view(sf::View({ -ratio, -1, 2 * ratio, 2 }));
-    }
+    {}
 
     void Game::run()
     {
+        // Initialize the components.
+        if (init_)
+            init_();
+
+        // Load the first screen.
+        if (requested_screen_)
+            screen_ = std::move(requested_screen_);
+        if (!screen_)
+            throw std::runtime_error("Game::run(): You must load a screen before running the game.");
+        if (screen_->init_)
+            screen_->init_();
+
         // Run the main loop.
         clock_.restart();
         while (window_.isOpen())
         {
+            // Load the next screen.
+            if (requested_screen_)
+                screen_ = std::move(requested_screen_);
+
             // Process window events.
             sfe::Input::global().reset();
             sf::Event event;
@@ -36,14 +48,18 @@ namespace sfe
 
             // Update the screen.
             auto elapsed_time = clock_.restart();
-            screen_.update(window_, elapsed_time);
+            screen_->update(window_, elapsed_time);
 
             // Call the concrete update method.
-            update(elapsed_time);
+            if (update_)
+                update_(elapsed_time);
+
+            // Handle all events.
+            EventManager::global().dispatch();
 
             // Draw the screen.
             window_.clear();
-            screen_.render(window_);
+            screen_->render(window_);
             window_.display();
         }
     }
@@ -56,5 +72,15 @@ namespace sfe
     sf::RenderWindow const & Game::get_window() const
     {
         return window_;
+    }
+
+    void Game::load_screen(std::unique_ptr<Screen> new_screen, bool change_to_default_view)
+    {
+        requested_screen_ = std::move(new_screen);
+        if (change_to_default_view)
+        {
+            float const ratio = window_.getSize().x / static_cast<float>(window_.getSize().y);
+            requested_screen_->set_game_view(sf::View({ -ratio, -1, 2 * ratio, 2 }));
+        }
     }
 }

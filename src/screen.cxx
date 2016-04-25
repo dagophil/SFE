@@ -37,6 +37,10 @@ namespace sfe
         for (auto & obj : game_objects_)
             obj->update(elapsed_time);
 
+        // Call the custom update method.
+        if (update_)
+            update_(elapsed_time);
+
         // Sort the game objects by their z-index so they are drawn in the right order.
         std::sort(game_objects_.begin(), game_objects_.end(),
             [](auto && a, auto && b) {
@@ -108,6 +112,16 @@ namespace sfe
     void Screen::set_game_view(sf::View const & view)
     {
         game_view_ = view;
+    }
+
+    void Screen::add_listener(std::unique_ptr<Listener> listener)
+    {
+        listeners_.push_back(std::move(listener));
+    }
+
+    void Screen::clear_listeners()
+    {
+        listeners_.clear();
     }
 
 } // namespace sfe
