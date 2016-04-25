@@ -132,10 +132,12 @@ namespace sfe
 
     void Widget::render(sf::RenderTarget & target, sf::FloatRect const & parent_render_rect) const
     {
+        // Compute the render rectangle.
+        render_rect_ = compute_render_rect(parent_render_rect);
+
+        // Render the widget and the subwidgets.
         if (visible_)
         {
-            // Render the widget and the subwidgets.
-            render_rect_ = compute_render_rect(parent_render_rect);
             render_impl(target);
             for (auto const & w : widgets_)
                 w->render(target, render_rect_);

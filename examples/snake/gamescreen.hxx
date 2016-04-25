@@ -327,6 +327,8 @@ namespace snake
         EventManager::global().register_event("AddSpecialEffect");
         EventManager::global().register_event("ClearSpecialEffects");
         EventManager::global().register_event("GameOver");
+        EventManager::global().register_event("SoundOn");
+        EventManager::global().register_event("SoundOff");
 
         // Select easy difficulty.
         create_and_register_listener(
@@ -397,6 +399,19 @@ namespace snake
                 init_impl();
             },
             "GameOver"
+        );
+
+        create_and_register_listener(
+            [](Event const & event) {
+                std::cout << "Sound ON!" << std::endl;
+            },
+            "SoundOn"
+        );
+        create_and_register_listener(
+            [](Event const & event) {
+                std::cout << "Sound OFF!" << std::endl;
+            },
+            "SoundOff"
         );
     }
 
@@ -469,14 +484,66 @@ namespace snake
 
         // Create the container for the sound icons.
         auto sound_container = std::make_unique<Widget>();
-        auto sound_ptr = get_gui().add_widget(std::move(sound_container));
-        sound_ptr->set_align_x(AlignX::Right);
-        sound_ptr->set_align_y(AlignY::Top);
-        sound_ptr->set_x(0.02f);
-        sound_ptr->set_y(0.02f);
-        sound_ptr->set_height(0.05f);
+        auto sound_container_ptr = get_gui().add_widget(std::move(sound_container));
+        sound_container_ptr->set_align_x(AlignX::Right);
+        sound_container_ptr->set_align_y(AlignY::Top);
+        sound_container_ptr->set_x(0.02f);
+        sound_container_ptr->set_y(0.02f);
+        sound_container_ptr->set_height(0.05f);
         
+        // Create the different sound icons.
+        std::string sound_file[] = {
+            "img/sound_off_glow.png",
+            "img/sound_off.png",
+            "img/sound_on_glow.png",
+            "img/sound_on.png" 
+        };
+        std::vector<Widget*> sound_ptr;
+        for (int i = 0; i < 4; ++i)
+        {
+            // Create the sound widget.
+            auto sound = std::make_unique<ImageWidget>(sound_file[i]);
+            auto ptr = sound_container_ptr->add_widget(std::move(sound));
+            sound_ptr.push_back(ptr);
+            ptr->set_scale(Scale::X);
+            ptr->set_align_x(AlignX::Right);
+            ptr->set_z_index(i);
 
+            // Change the z-index on a mouse enter or mouse leave event.
+            ptr->add_mouse_enter_callback([i](Widget & w) {
+                auto offset = (i == 0 || i == 2) ? 1 : -1;
+                w.set_z_index(w.get_z_index() + offset);
+            });
+            ptr->add_mouse_leave_callback([i](Widget & w) {
+                auto offset = (i == 1 || i == 3) ? 1 : -1;
+                w.set_z_index(w.get_z_index() + offset);
+            });
+
+            // Toggle the visibility on a sound toggle event.
+            auto sound_toggle_listener = std::make_unique<Listener>(
+                [ptr](Event const & event) {
+                    ptr->set_visible(!ptr->get_visible());
+                }
+            );
+            EventManager::global().register_listener(*sound_toggle_listener, "SoundOn");
+            EventManager::global().register_listener(*sound_toggle_listener, "SoundOff");
+            ptr->add_listener(std::move(sound_toggle_listener));
+        }
+
+        // If this click callback would be added to all sound icon widgets,
+        // it would be sent four times on a single click. To prevent this,
+        // it is only added to one of the widgets.
+        sound_ptr[0]->add_click_end_callback([sound_ptr](Widget & w) {
+            if (sound_ptr[0]->get_visible())
+                EventManager::global().enqueue("SoundOn");
+            else
+                EventManager::global().enqueue("SoundOff");
+        });
+
+        // By default, show the sound-on icons.
+        // TODO: Read the actual state from an options object.
+        sound_ptr[0]->set_visible(false);
+        sound_ptr[1]->set_visible(false);
     }
 
     inline void GameScreen::update_impl(sf::Time elapsed_time)
