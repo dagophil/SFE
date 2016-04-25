@@ -55,7 +55,7 @@ namespace sfe
         for (auto const & obj : game_objects_)
             obj->render(target);
         target.setView({ { 0.5f, 0.5f },{ 1.0f, 1.0f } });
-        gui_.render(target);
+        gui_.render(target, { 0.0f, 0.0f, 1.0f, 1.0f });
     }
 
     Widget & Screen::get_gui()

@@ -106,7 +106,7 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         /// Render the widget and all subwidgets.
         ////////////////////////////////////////////////////////////
-        void render(sf::RenderTarget & target) const;
+        void render(sf::RenderTarget & target, sf::FloatRect const & parent_render_rect) const;
 
         ////////////////////////////////////////////////////////////
         /// Return the x-coordinate.
@@ -228,6 +228,11 @@ namespace sfe
         void set_absorb_click(bool absorb_click);
 
         ////////////////////////////////////////////////////////////
+        /// Return the rectangle that is used for rendering.
+        ////////////////////////////////////////////////////////////
+        sf::FloatRect const & get_render_rect() const;
+
+        ////////////////////////////////////////////////////////////
         /// Add a callback for the mouse enter event.
         ////////////////////////////////////////////////////////////
         void add_mouse_enter_callback(CallbackFunction && f);
@@ -291,7 +296,7 @@ namespace sfe
         /// Compute the render rectangle with respect to the scale
         /// method and the alignment.
         ////////////////////////////////////////////////////////////
-        sf::FloatRect render_rect() const;
+        sf::FloatRect compute_render_rect(sf::FloatRect const & parent_render_rect) const;
 
         ////////////////////////////////////////////////////////////
         /// Sort the subwidgets by ascending z-index.
@@ -302,6 +307,13 @@ namespace sfe
         /// The rectangle.
         ////////////////////////////////////////////////////////////
         sf::FloatRect rect_;
+
+        ////////////////////////////////////////////////////////////
+        /// The actual rectangle that was used in the last render()
+        /// method. Opposed to rect_, the render_rect_ is computed
+        /// with respect to scale and alignment.
+        ////////////////////////////////////////////////////////////
+        mutable sf::FloatRect render_rect_;
 
         ////////////////////////////////////////////////////////////
         /// Whether the widget is visible.

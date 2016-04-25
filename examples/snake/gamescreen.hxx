@@ -175,11 +175,6 @@ namespace snake
         sfe::Array2D<FieldType> fields_;
 
         ////////////////////////////////////////////////////////////
-        /// The number of free game fields.
-        ////////////////////////////////////////////////////////////
-        size_t num_free_fields_;
-
-        ////////////////////////////////////////////////////////////
         /// The snake head.
         ////////////////////////////////////////////////////////////
         FieldObject snake_head_;
@@ -192,7 +187,7 @@ namespace snake
         ////////////////////////////////////////////////////////////
         /// The food.
         ////////////////////////////////////////////////////////////
-        FieldObject food_;
+        sfe::GameObject* food_;
 
         ////////////////////////////////////////////////////////////
         /// The random engine.
@@ -271,13 +266,12 @@ namespace snake
         get_gui().clear_widgets();
         clear_game_objects();
         clear_listeners();
+        clear_special_effects();
 
         // Initialize the screen variables with a default game field.
         std::fill(fields_.begin(), fields_.end(), FieldType::Empty);
-        num_free_fields_ = num_fields_x*num_fields_y;
         snake_head_ = FieldObject();
         snake_body_.clear();
-        food_ = FieldObject();
         current_direction_ = Direction::Right;
         new_direction_ = Direction::Right;
         step_time_ = sf::seconds(0.4f);
@@ -296,13 +290,13 @@ namespace snake
 
         // Create the background image.
         auto const ratio = get_game_view().getSize().x / get_game_view().getSize().y;
-        auto bg = std::make_unique<ImageObject>("camel_bg.jpg");
+        auto bg = std::make_unique<ImageObject>("img/camel_bg.jpg");
         bg->set_z_index(-2);
         bg->set_size(2 * ratio, 2);
         add_game_object(std::move(bg));
 
         // Create the borders of the game field.
-        auto field_border = std::make_unique<ImageObject>("frame.png");
+        auto field_border = std::make_unique<ImageObject>("img/frame.png");
         field_border->set_z_index(-1);
         field_border->set_size(game_field_width * 1.11286407767f, game_field_height * 1.16006884682f);
         add_game_object(std::move(field_border));
@@ -313,7 +307,11 @@ namespace snake
             create_body_part(snake_head_.x - 1 - i, snake_head_.y);
 
         // Spawn the first food item.
+        auto food = std::make_unique<ImageObject>("img/strawberry.png");
+        food->set_size(field_width, field_height);
+        food_ = add_game_object(std::move(food));
         spawn_food();
+        
     }
 
     inline void GameScreen::init_listeners()
@@ -324,6 +322,11 @@ namespace snake
         EventManager::global().register_event("SelectEasyDifficulty");
         EventManager::global().register_event("SelectHardDifficulty");
         EventManager::global().register_event("StartGame");
+        EventManager::global().register_event("MovedSnake");
+        EventManager::global().register_event("CollectedFood");
+        EventManager::global().register_event("AddSpecialEffect");
+        EventManager::global().register_event("ClearSpecialEffects");
+        EventManager::global().register_event("GameOver");
 
         // Select easy difficulty.
         create_and_register_listener(
@@ -350,6 +353,51 @@ namespace snake
             },
             "StartGame"
         );
+
+        // Collected food.
+        create_and_register_listener(
+            [this](Event const & event) {
+                ++food_counter_;
+                spawn_food();
+                step_time_ = 0.9f * (step_time_ - sf::seconds(0.04f)) + sf::seconds(0.04f);
+
+                // In hard mode: Add or remove a special effect.
+                if (!easymode_)
+                {
+                    if ((food_counter_ + 4) % 8 == 0)
+                        sfe::EventManager::global().enqueue("AddSpecialEffect");
+                    if (food_counter_ > 0 && (food_counter_ + 8) % 8 == 0)
+                        sfe::EventManager::global().enqueue("ClearSpecialEffects");
+                }
+            },
+            "CollectedFood"
+        );
+
+        // Add special effect.
+        create_and_register_listener(
+            [this](Event const & event) {
+                add_special_effect();
+            },
+            "AddSpecialEffect"
+        );
+
+        // Clear special effects.
+        create_and_register_listener(
+            [this](Event const & event) {
+                clear_special_effects();
+            },
+            "ClearSpecialEffects"
+        );
+
+        // Game over.
+        create_and_register_listener(
+            [this](Event const & event) {
+                std::cout << "Game over." << std::endl;
+                std::cout << "You collected " << food_counter_ << " food." << std::endl;
+                init_impl();
+            },
+            "GameOver"
+        );
     }
 
     inline void GameScreen::create_gui()
@@ -359,44 +407,44 @@ namespace snake
         // Create the container of the difficulty selector.
         auto difficulty_container = std::make_unique<Widget>();
         auto container_ptr = get_gui().add_widget(std::move(difficulty_container));
+        container_ptr->set_align_y(AlignY::Center);
+        container_ptr->set_height(0.4f);
         auto difficulty_remover = std::make_unique<Listener>(
             [container_ptr](Event const & event) {
-            container_ptr->remove_from_parent();
-        }
+                container_ptr->remove_from_parent();
+            }
         );
         EventManager::global().register_listener(*difficulty_remover, "StartGame");
         container_ptr->add_listener(std::move(difficulty_remover));
 
         // Create the box for the currently selected item.
-        auto text_frame = std::make_unique<ImageWidget>("text_frame.png");
+        auto text_frame = std::make_unique<ImageWidget>("img/text_frame.png");
         auto frame_ptr = container_ptr->add_widget(std::move(text_frame));
         frame_ptr->set_align_x(AlignX::Center);
-        frame_ptr->set_align_y(AlignY::Center);
-        frame_ptr->set_height(0.2f);
+        frame_ptr->set_align_y(AlignY::Top);
+        frame_ptr->set_height(0.5f);
         frame_ptr->set_scale(Scale::X);
-        frame_ptr->set_y(-0.1f);
         auto frame_easy_selector = std::make_unique<Listener>(
             [frame_ptr](Event const & event) {
-            frame_ptr->set_y(-0.1f);
-        }
+                frame_ptr->set_align_y(AlignY::Top);
+            }
         );
         EventManager::global().register_listener(*frame_easy_selector, "SelectEasyDifficulty");
         frame_ptr->add_listener(std::move(frame_easy_selector));
         auto frame_hard_selector = std::make_unique<Listener>(
             [frame_ptr](Event const & event) {
-            frame_ptr->set_y(0.1f);
-        }
+                frame_ptr->set_align_y(AlignY::Bottom);
+            }
         );
         EventManager::global().register_listener(*frame_hard_selector, "SelectHardDifficulty");
         frame_ptr->add_listener(std::move(frame_hard_selector));
 
         // Create the "easy" text.
-        auto easy = std::make_unique<ImageWidget>("easy.png");
+        auto easy = std::make_unique<ImageWidget>("img/easy.png");
         easy->set_align_x(AlignX::Center);
-        easy->set_align_y(AlignY::Center);
-        easy->set_height(0.2f);
+        easy->set_align_y(AlignY::Top);
+        easy->set_height(0.5f);
         easy->set_scale(Scale::X);
-        easy->set_y(-0.1f);
         easy->add_mouse_enter_callback([frame_ptr](Widget & w) {
             EventManager::global().enqueue("SelectEasyDifficulty");
         });
@@ -406,12 +454,11 @@ namespace snake
         container_ptr->add_widget(std::move(easy));
 
         // Create the "hard" text.
-        auto hard = std::make_unique<ImageWidget>("hard.png");
+        auto hard = std::make_unique<ImageWidget>("img/hard.png");
         hard->set_align_x(AlignX::Center);
-        hard->set_align_y(AlignY::Center);
-        hard->set_height(0.2f);
+        hard->set_align_y(AlignY::Bottom);
+        hard->set_height(0.5f);
         hard->set_scale(Scale::X);
-        hard->set_y(0.1f);
         hard->add_mouse_enter_callback([frame_ptr](Widget & w) {
             EventManager::global().enqueue("SelectHardDifficulty");
         });
@@ -419,6 +466,17 @@ namespace snake
             EventManager::global().enqueue("StartGame");
         });
         container_ptr->add_widget(std::move(hard));
+
+        // Create the container for the sound icons.
+        auto sound_container = std::make_unique<Widget>();
+        auto sound_ptr = get_gui().add_widget(std::move(sound_container));
+        sound_ptr->set_align_x(AlignX::Right);
+        sound_ptr->set_align_y(AlignY::Top);
+        sound_ptr->set_x(0.02f);
+        sound_ptr->set_y(0.02f);
+        sound_ptr->set_height(0.05f);
+        
+
     }
 
     inline void GameScreen::update_impl(sf::Time elapsed_time)
@@ -438,21 +496,17 @@ namespace snake
                     new_head.y < 0 || new_head.y >= num_fields_y ||
                     fields_(new_head.x, new_head.y) == FieldType::Snake)
                 {
-                    game_over();
+                    sfe::EventManager::global().enqueue("GameOver");
                 }
                 else
                 {
                     // Move the snake and spawn an additional body part if food was collected.
                     bool const got_food = fields_(new_head.x, new_head.y) == FieldType::Food;
                     move_snake(got_food, new_head);
-
-                    // Spawn a new food.
                     if (got_food)
-                    {
-                        ++food_counter_;
-                        spawn_food();
-                        step_time_ = 0.9f * (step_time_ - sf::seconds(0.04f)) + sf::seconds(0.04f);
-                    }
+                        sfe::EventManager::global().enqueue("CollectedFood");
+                    else
+                        sfe::EventManager::global().enqueue("MovedSnake");
                 }
 
                 // Update the step time.
@@ -509,11 +563,10 @@ namespace snake
         snake_head_.x = x;
         snake_head_.y = y;
         fields_(x, y) = FieldType::Snake;
-        --num_free_fields_;
 
         // Create the game object and add it to the screen.
         auto const pos = field_to_view(x, y);
-        auto head = std::make_unique<sfe::ImageObject>("snake_head.png");
+        auto head = std::make_unique<sfe::ImageObject>("img/snake_head.png");
         head->set_size(field_width, field_height);
         head->set_position(pos);
         snake_head_.obj = add_game_object(std::move(head));
@@ -526,11 +579,10 @@ namespace snake
         part.x = x;
         part.y = y;
         fields_(x, y) = FieldType::Snake;
-        --num_free_fields_;
 
         // Create the game object and add it to the screen.
         auto const pos = field_to_view(x, y);
-        auto body = std::make_unique<sfe::ImageObject>("snake_body.png");
+        auto body = std::make_unique<sfe::ImageObject>("img/snake_body.png");
         body->set_size(field_width, field_height);
         body->set_position(pos);
         part.obj = add_game_object(std::move(body));
@@ -588,17 +640,9 @@ namespace snake
 
     inline void GameScreen::spawn_food()
     {
-        // In hard mode: Add or remove a special effect.
-        if (!easymode_)
-        {
-            if ((food_counter_ + 4) % 8 == 0)
-                add_special_effect();
-            if (food_counter_ > 0 && (food_counter_ + 8) % 8 == 0)
-                clear_special_effects();
-        }
-
         // Find a random position on the field.
-        std::uniform_int_distribution<> rand(0, num_free_fields_ - 1);
+        auto const num_free_fields = std::count(fields_.begin(), fields_.end(), FieldType::Empty);
+        std::uniform_int_distribution<> rand(0, num_free_fields - 1);
         auto pos = rand(rand_engine_);
 
         // Loop over all empty fields until the position is reached.
@@ -610,42 +654,16 @@ namespace snake
                 if (fields_(x, y) != FieldType::Empty)
                     continue;
 
+                // Update the food position.
                 if (i == pos)
                 {
-                    food_.x = x;
-                    food_.y = y;
                     fields_(x, y) = FieldType::Food;
-                    auto food_pos = field_to_view(x, y);
-
-                    if (food_.obj != nullptr)
-                    {
-                        // There already is a food object, so just move it.
-                        food_.obj->set_position(food_pos);
-                    }
-                    else
-                    {
-                        // Create a new food object.
-                        auto food = std::make_unique<sfe::ImageObject>("strawberry.png");
-                        food->set_size(field_width, field_height);
-                        food->set_position(food_pos);
-                        food_.obj = add_game_object(std::move(food));
-                    }
-
+                    food_->set_position(field_to_view(x, y));
                     return;
                 }
                 ++i;
             }
         }
-    }
-
-    inline void GameScreen::game_over()
-    {
-        std::cout << "Game over." << std::endl;
-        std::cout << "You collected " << food_counter_ << " food." << std::endl;
-
-        clear_special_effects();
-        clear_game_objects();
-        init_impl();
     }
 
     inline void GameScreen::add_special_effect()

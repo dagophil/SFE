@@ -72,8 +72,7 @@ namespace sfe
     {
         // Update the mouseoverstate.
         auto old_mouseover = mouseover_;
-        auto r = render_rect();
-        mouseover_ = r.contains(x, y);
+        mouseover_ = render_rect_.contains(x, y);
 
         // Fire the mouseover events.
         if (!old_mouseover && mouseover_)
@@ -85,8 +84,6 @@ namespace sfe
 
         // Update the subwidgets.
         bool handled = false;
-        x = (x - r.left) / r.width;
-        y = (y - r.top) / r.height;
         for (auto const & w : widgets_)
             if (w->update_mouse(x, y))
                 handled = true;
@@ -133,29 +130,15 @@ namespace sfe
         );
     }
 
-    void Widget::render(sf::RenderTarget & target) const
+    void Widget::render(sf::RenderTarget & target, sf::FloatRect const & parent_render_rect) const
     {
         if (visible_)
         {
-            // Save the view.
-            auto const old_view = target.getView();
-            auto const & center = old_view.getCenter();
-            auto const & size = old_view.getSize();
-
-            // Assign the new view.
-            auto r = render_rect();
-            sf::View view;
-            view.setSize({ size.x / r.width, size.y / r.height });
-            view.setCenter({ (center.x - r.left) / r.width, (center.y - r.top) / r.height });
-            target.setView(view);
-
             // Render the widget and the subwidgets.
+            render_rect_ = compute_render_rect(parent_render_rect);
             render_impl(target);
             for (auto const & w : widgets_)
-                w->render(target);
-
-            // Restore the old view.
-            target.setView(old_view);
+                w->render(target, render_rect_);
         }
     }
 
@@ -274,6 +257,11 @@ namespace sfe
         absorb_click_ = absorb_click;
     }
 
+    sf::FloatRect const & Widget::get_render_rect() const
+    {
+        return render_rect_;
+    }
+
     void Widget::add_mouse_enter_callback(CallbackFunction && f)
     {
         mouse_enter_callbacks_.emplace_back(f);
@@ -325,44 +313,41 @@ namespace sfe
     void Widget::render_impl(sf::RenderTarget & target) const
     {}
 
-    sf::FloatRect Widget::render_rect() const
+    sf::FloatRect Widget::compute_render_rect(sf::FloatRect const & parent_render_rect) const
     {
         // Compute the size with respect to the scale method.
-        float width;
-        float height;
+        sf::FloatRect r = parent_render_rect;
         if (scale_ == Scale::X)
         {
-            height = rect_.height;
-            width = ratio_ * height / viewport_ratio;
+            r.height *= rect_.height;
+            r.width = r.height * ratio_ / viewport_ratio;
         }
         else if (scale_ == Scale::Y)
         {
-            width = rect_.width;
-            height = width / ratio_ * viewport_ratio;
+            r.width *= rect_.width;
+            r.height = r.width / ratio_ * viewport_ratio;
         }
         else // scale_ == Scale::None
         {
-            width = rect_.width;
-            height = rect_.height;
+            r.width *= rect_.width;
+            r.height *= rect_.height;
         }
 
         // Compute the widget position with respect to horizontal and vertical alignment.
-        float left;
         if (align_x_ == AlignX::Left)
-            left = rect_.left;
+            r.left += rect_.left * parent_render_rect.width;
         else if (align_x_ == AlignX::Right)
-            left = 1.0f - rect_.left - width;
+            r.left += (1.0f - rect_.left) * parent_render_rect.width - r.width;
         else // align_x_ == AlignX::Center
-            left = 0.5f - 0.5f * width + rect_.left;
-        float top;
+            r.left += (0.5f + rect_.left) * parent_render_rect.width - 0.5f * r.width;
         if (align_y_ == AlignY::Top)
-            top = rect_.top;
+            r.top += rect_.top * parent_render_rect.height;
         else if (align_y_ == AlignY::Bottom)
-            top = 1.0f - rect_.top - height;
+            r.top += (1.0f - rect_.top) * parent_render_rect.height - r.height;
         else // align_y_ == AlignY::Center
-            top = 0.5f - 0.5f * height + rect_.top;
+            r.top += (0.5f + rect_.top) * parent_render_rect.height - 0.5f * r.height;
 
-        return { left, top, width, height };
+        return r;
     }
 
     void Widget::sort_widgets()
@@ -381,7 +366,9 @@ namespace sfe
 
     void ColorWidget::render_impl(sf::RenderTarget & target) const
     {
-        auto r = sf::RectangleShape({ 1.0f, 1.0f });
+        auto const & rect = get_render_rect();
+        auto r = sf::RectangleShape({ rect.width, rect.height });
+        r.setPosition(rect.left, rect.top);
         r.setFillColor(color_);
         target.draw(r);
     }
@@ -395,8 +382,10 @@ namespace sfe
 
     void ImageWidget::render_impl(sf::RenderTarget & target) const
     {
+        auto const & r = get_render_rect();
         sf::Sprite spr(texture_);
-        spr.setScale(1.0f / texture_.getSize().x, 1.0f / texture_.getSize().y);
+        spr.setPosition(r.left, r.top);
+        spr.setScale(r.width / texture_.getSize().x, r.height / texture_.getSize().y);
         target.draw(spr);
     }
 
