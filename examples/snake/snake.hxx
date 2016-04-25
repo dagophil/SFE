@@ -7,6 +7,7 @@
 #include <SFE/game.hxx>
 #include <SFE/ndarray.hxx>
 #include <SFE/input.hxx>
+#include <SFE/event_manager.hxx>
 
 // Game constants.
 static float const game_field_width = 2.2f;
@@ -95,9 +96,26 @@ private:
     };
 
     ////////////////////////////////////////////////////////////
+    /// The special effects.
+    ////////////////////////////////////////////////////////////
+    enum class Effect
+    {
+        None = 0,
+        Crooked,
+        Wave,
+
+        EffectCount
+    };
+
+    ////////////////////////////////////////////////////////////
     /// Update the direction according to the user input.
     ////////////////////////////////////////////////////////////
     void update_direction();
+
+    ////////////////////////////////////////////////////////////
+    /// Update the special effects.
+    ////////////////////////////////////////////////////////////
+    void update_special_effects(sf::Time elapsed_time);
 
     ////////////////////////////////////////////////////////////
     /// Update the step time according to the number of
@@ -136,6 +154,16 @@ private:
     /// Stop the game loop and show some message.
     ////////////////////////////////////////////////////////////
     void game_over();
+
+    ////////////////////////////////////////////////////////////
+    /// Add a random special effect.
+    ////////////////////////////////////////////////////////////
+    void add_special_effect();
+
+    ////////////////////////////////////////////////////////////
+    /// Clear the special effects.
+    ////////////////////////////////////////////////////////////
+    void clear_special_effects();
 
     ////////////////////////////////////////////////////////////
     /// Stores which fields are currently occupied by the snake
@@ -210,6 +238,16 @@ private:
     ////////////////////////////////////////////////////////////
     bool chose_difficulty_;
 
+    ////////////////////////////////////////////////////////////
+    /// The current special effect.
+    ////////////////////////////////////////////////////////////
+    Effect current_effect_;
+
+    ////////////////////////////////////////////////////////////
+    /// The runtime of the wave effect.
+    ////////////////////////////////////////////////////////////
+    sf::Time wave_time_;
+
 }; // class SnakeGame
 
 template <typename... Args>
@@ -237,6 +275,8 @@ void SnakeGame::init()
     food_counter_ = 0;
     easymode_ = true;
     chose_difficulty_ = false;
+    current_effect_ = Effect::None;
+    wave_time_ = sf::Time::Zero;
 
     // Create the background image.
     auto const ratio = screen_.get_game_view().getSize().x / screen_.get_game_view().getSize().y;
@@ -344,12 +384,10 @@ void SnakeGame::update(sf::Time elapsed_time)
             // Update the step time.
             until_next_step_ += step_time_;
         }
-    }
 
-    //// Apply some rotation to make things interesting.
-    //total_elapsed_time_ += elapsed_time;
-    //auto r = 5 * std::sin(1 * total_elapsed_time_.asSeconds());
-    //screen_.get_game_view().setRotation(r);
+        // Update the special effects.
+        update_special_effects(elapsed_time);
+    }
 }
 
 void SnakeGame::update_direction()
@@ -378,6 +416,16 @@ void SnakeGame::update_direction()
     {
         head_ptr->set_rotation(90.f * static_cast<int>(new_direction_));
         head_ptr->set_mirror_x(false);
+    }
+}
+
+void SnakeGame::update_special_effects(sf::Time elapsed_time)
+{
+    if (current_effect_ == Effect::Wave)
+    {
+        wave_time_ += elapsed_time;
+        auto r = 5 * std::sin(1 * wave_time_.asSeconds());
+        screen_.get_game_view().setRotation(r);
     }
 }
 
@@ -466,6 +514,15 @@ void SnakeGame::move_snake(bool got_food, sf::Vector2i const & new_head_pos)
 
 void SnakeGame::spawn_food()
 {
+    // In hard mode: Add or remove a special effect.
+    if (!easymode_)
+    {
+        if ((food_counter_ + 4) % 8 == 0)
+            add_special_effect();
+        if (food_counter_ > 0 && (food_counter_ + 8) % 8 == 0)
+            clear_special_effects();
+    }
+
     // Find a random position on the field.
     std::uniform_int_distribution<> rand(0, num_free_fields_-1);
     auto pos = rand(rand_engine_);
@@ -512,8 +569,34 @@ void SnakeGame::game_over()
     std::cout << "Game over." << std::endl;
     std::cout << "You collected " << food_counter_ << " food." << std::endl;
 
+    clear_special_effects();
     screen_.clear_game_objects();
     init();
+}
+
+void SnakeGame::add_special_effect()
+{
+    // Create a random effect.
+    auto num_effects = static_cast<int>(Effect::EffectCount);
+    std::uniform_int_distribution<int> rand(1, num_effects-1);
+    auto eff = rand(rand_engine_);
+    current_effect_ = static_cast<Effect>(eff);
+
+    // Apply the effect.
+    if (current_effect_ == Effect::Crooked)
+    {
+        screen_.get_game_view().setRotation(14);
+    }
+    else if (current_effect_ == Effect::Wave)
+    {
+        wave_time_ = sf::Time::Zero;
+    }
+}
+
+void SnakeGame::clear_special_effects()
+{
+    screen_.get_game_view().setRotation(0);
+    current_effect_ = Effect::None;
 }
 
 #endif

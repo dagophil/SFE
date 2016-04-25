@@ -1,4 +1,3 @@
-#include <iostream>
 #include <string>
 #include <algorithm>
 
@@ -22,7 +21,8 @@ namespace sfe
         ratio_(1.0f),
         mouseover_(false),
         mousedown_(false),
-        absorb_click_(false)
+        absorb_click_(false),
+        remove_this_(false)
     {}
 
     Widget* Widget::add_widget(std::unique_ptr<Widget> w)
@@ -56,6 +56,11 @@ namespace sfe
         {
             return std::unique_ptr<Widget>();
         }
+    }
+
+    void Widget::remove_from_parent()
+    {
+        remove_this_ = true;
     }
 
     void Widget::clear_widgets()
@@ -113,10 +118,19 @@ namespace sfe
 
     void Widget::update(sf::Time elapsed_time)
     {
+        // Update this widget and the subwidgets.
         update_impl(elapsed_time);
         sort_widgets();
         for (auto const & w : widgets_)
             w->update(elapsed_time);
+
+        //// Remove subwidgets that are marked for removal.
+        widgets_.erase(
+            std::remove_if(widgets_.begin(), widgets_.end(), [](auto && w) {
+                return w->remove_this_;
+            }),
+            widgets_.end()
+        );
     }
 
     void Widget::render(sf::RenderTarget & target) const

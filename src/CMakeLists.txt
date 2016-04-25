@@ -5,7 +5,8 @@ add_library(sfe
 	input.cxx
 	utility.cxx
 	game_object.cxx
-	game.cxx)
+	game.cxx
+	event_manager.cxx)
 target_link_libraries(sfe
 	${Boost_FILESYSTEM_LIBRARY}
 )
