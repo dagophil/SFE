@@ -375,6 +375,16 @@ namespace sfe
         target.draw(r);
     }
 
+    sf::Color const & ColorWidget::get_color() const
+    {
+        return color_;
+    }
+
+    void ColorWidget::set_color(sf::Color const & color)
+    {
+        color_ = color;
+    }
+
     ImageWidget::ImageWidget(std::string const & filename)
         :
         texture_(ResourceManager::global().get_texture(filename))

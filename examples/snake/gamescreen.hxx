@@ -86,6 +86,8 @@ namespace snake
             None = 0,
             Crooked,
             Wave,
+            FlashLight,
+            FlashDark,
 
             EffectCount // this must always be the last element in the enum
         };
@@ -152,11 +154,6 @@ namespace snake
         /// field.
         ////////////////////////////////////////////////////////////
         void spawn_food();
-
-        ////////////////////////////////////////////////////////////
-        /// Stop the game loop and show some message.
-        ////////////////////////////////////////////////////////////
-        void game_over();
 
         ////////////////////////////////////////////////////////////
         /// Add a random special effect.
@@ -236,9 +233,14 @@ namespace snake
         Effect current_effect_;
 
         ////////////////////////////////////////////////////////////
-        /// The runtime of the wave effect.
+        /// The runtime of the current effect.
         ////////////////////////////////////////////////////////////
-        sf::Time wave_time_;
+        sf::Time effect_time_;
+
+        ////////////////////////////////////////////////////////////
+        /// The flash widget.
+        ////////////////////////////////////////////////////////////
+        sfe::Widget* flash_;
 
     }; // class GameScreen
 
@@ -280,7 +282,7 @@ namespace snake
         food_counter_ = 0;
         easymode_ = true;
         current_effect_ = Effect::None;
-        wave_time_ = sf::Time::Zero;
+        effect_time_ = sf::Time::Zero;
 
         // Initialize the listeners.
         init_listeners();
@@ -490,6 +492,7 @@ namespace snake
         sound_container_ptr->set_x(0.02f);
         sound_container_ptr->set_y(0.02f);
         sound_container_ptr->set_height(0.05f);
+        sound_container_ptr->set_z_index(100); // always on top
         
         // Create the different sound icons.
         std::string sound_file[] = {
@@ -616,11 +619,23 @@ namespace snake
 
     inline void GameScreen::update_special_effects(sf::Time elapsed_time)
     {
+        if (current_effect_ != Effect::None)
+            effect_time_ += elapsed_time;
         if (current_effect_ == Effect::Wave)
         {
-            wave_time_ += elapsed_time;
-            auto r = 5 * std::sin(1 * wave_time_.asSeconds());
+            auto r = 5 * std::sin(1 * effect_time_.asSeconds());
             get_game_view().setRotation(r);
+        }
+        else if (current_effect_ == Effect::FlashLight || current_effect_ == Effect::FlashDark)
+        {
+            sf::Color col = (current_effect_ == Effect::FlashLight) ? sf::Color::White : sf::Color::Black;
+            auto const max_a = (current_effect_ == Effect::FlashLight) ? 112 : 165;
+            if (effect_time_.asSeconds() <= 1.0f)
+                col.a = 255 - static_cast<sf::Uint8>(effect_time_.asSeconds() * (255-max_a));
+            else
+                col.a = max_a;
+            auto flash = dynamic_cast<sfe::ColorWidget*>(flash_);
+            flash->set_color(col);
         }
     }
 
@@ -735,26 +750,40 @@ namespace snake
 
     inline void GameScreen::add_special_effect()
     {
+        using namespace sfe;
+
         // Create a random effect.
         auto num_effects = static_cast<int>(Effect::EffectCount);
         std::uniform_int_distribution<int> rand(1, num_effects - 1);
         auto eff = rand(rand_engine_);
         current_effect_ = static_cast<Effect>(eff);
+        effect_time_ = sf::Time::Zero;
 
-        // Apply the effect.
+        // Initialize the effect.
         if (current_effect_ == Effect::Crooked)
         {
             get_game_view().setRotation(14);
         }
-        else if (current_effect_ == Effect::Wave)
+        else if (current_effect_ == Effect::FlashLight)
         {
-            wave_time_ = sf::Time::Zero;
+            auto flash = std::make_unique<ColorWidget>(sf::Color(255, 255, 255, 255));
+            flash_ = get_gui().add_widget(std::move(flash));
+        }
+        else if (current_effect_ == Effect::FlashDark)
+        {
+            auto flash = std::make_unique<ColorWidget>(sf::Color(0, 0, 0, 255));
+            flash_ = get_gui().add_widget(std::move(flash));
         }
     }
 
     inline void GameScreen::clear_special_effects()
     {
         get_game_view().setRotation(0);
+        if (current_effect_ == Effect::FlashLight || current_effect_ == Effect::FlashDark)
+        {
+            flash_->remove_from_parent();
+            flash_ = nullptr;
+        }
         current_effect_ = Effect::None;
     }
 
