@@ -41,7 +41,7 @@ namespace snake
 
         ////////////////////////////////////////////////////////////
         /// A FieldObject holds the GameObject and the position of a
-        /// snake part or a food object.
+        /// snake part.
         ////////////////////////////////////////////////////////////
         struct FieldObject
         {
