@@ -1,12 +1,1 @@
-add_library(sfe
-	widget.cxx
-	screen.cxx
-	resource_manager.cxx
-	input.cxx
-	utility.cxx
-	game_object.cxx
-	game.cxx
-	event_manager.cxx)
-target_link_libraries(sfe
-	${Boost_FILESYSTEM_LIBRARY}
-)
+add_subdirectory(SFE)

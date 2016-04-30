@@ -8,14 +8,18 @@ namespace sfe
         position_({ 0, 0 }),
         size_({ 1, 1 }),
         rotation_(0),
-        z_index_(0)
+        z_index_(0),
+        visible_(true)
     {}
 
     void GameObject::update(sf::Time elapsed_time)
     {}
 
     void GameObject::render(sf::RenderTarget & target) const
-    {}
+    {
+        if (visible_)
+            render_impl(target);
+    }
 
     sf::Vector2f const & GameObject::get_position() const
     {
@@ -74,29 +78,50 @@ namespace sfe
         z_index_ = z_index;
     }
 
+    bool GameObject::get_visible() const
+    {
+        return visible_;
+    }
+
+    void GameObject::set_visible(bool b)
+    {
+        visible_ = b;
+    }
+
     ImageObject::ImageObject(std::string const & filename)
         :
-        texture_(ResourceManager::global().get_texture(filename)),
+        filename_(filename),
         mirror_x_(false),
         mirror_y_(false)
     {}
 
-    void ImageObject::render(sf::RenderTarget & target) const
+    void ImageObject::render_impl(sf::RenderTarget & target) const
     {
-        sf::Sprite spr(texture_);
+        auto const & texture = ResourceManager::global().get_texture(filename_);
+        sf::Sprite spr(texture);
         float rotation_offset = 0;
         if (mirror_x_ && mirror_y_)
             rotation_offset = 180;
         else if (mirror_x_)
-            spr.setTextureRect(sf::IntRect(texture_.getSize().x, 0, -static_cast<int>(texture_.getSize().x), texture_.getSize().y));
+            spr.setTextureRect(sf::IntRect(texture.getSize().x, 0, -static_cast<int>(texture.getSize().x), texture.getSize().y));
         else if (mirror_y_)
-            spr.setTextureRect(sf::IntRect(0, texture_.getSize().y, texture_.getSize().x, -static_cast<int>(texture_.getSize().y)));
-        spr.setOrigin(0.5f * texture_.getSize().x, 0.5f * texture_.getSize().y);
+            spr.setTextureRect(sf::IntRect(0, texture.getSize().y, texture.getSize().x, -static_cast<int>(texture.getSize().y)));
+        spr.setOrigin(0.5f * texture.getSize().x, 0.5f * texture.getSize().y);
         spr.setPosition(get_position().x, get_position().y);
         spr.setRotation(get_rotation()+rotation_offset);
-        spr.setScale(get_size().x / static_cast<float>(texture_.getSize().x),
-                     get_size().y / static_cast<float>(texture_.getSize().y));
+        spr.setScale(get_size().x / static_cast<float>(texture.getSize().x),
+                     get_size().y / static_cast<float>(texture.getSize().y));
         target.draw(spr);
+    }
+
+    std::string const & ImageObject::get_filename() const
+    {
+        return filename_;
+    }
+
+    void ImageObject::set_filename(std::string const & filename)
+    {
+        filename_ = filename;
     }
 
     bool ImageObject::get_mirror_x() const

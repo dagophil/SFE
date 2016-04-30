@@ -2,6 +2,7 @@
 #define SFE_EXAMPLE_SNAKE_GAMESCREEN_HXX
 
 #include <SFE/screen.hxx>
+#include <SFE/game_object.hxx>
 
 namespace snake
 {
@@ -64,7 +65,8 @@ namespace snake
         {
             Empty,
             Snake,
-            Food
+            Food,
+            Coin
         };
 
         ////////////////////////////////////////////////////////////
@@ -88,6 +90,7 @@ namespace snake
             Wave,
             FlashLight,
             FlashDark,
+            Coins,
 
             EffectCount // this must always be the last element in the enum
         };
@@ -121,12 +124,6 @@ namespace snake
         /// Update the special effects.
         ////////////////////////////////////////////////////////////
         void update_special_effects(sf::Time elapsed_time);
-
-        ////////////////////////////////////////////////////////////
-        /// Update the step time according to the number of
-        /// collected food items.
-        ////////////////////////////////////////////////////////////
-        void update_step_time();
 
         ////////////////////////////////////////////////////////////
         /// Create a snake head part at the given field coordinates.
@@ -238,9 +235,20 @@ namespace snake
         sf::Time effect_time_;
 
         ////////////////////////////////////////////////////////////
+        /// A counter for managing when events are raised.
+        ////////////////////////////////////////////////////////////
+        int event_counter_;
+
+        ////////////////////////////////////////////////////////////
         /// The flash widget.
         ////////////////////////////////////////////////////////////
         sfe::Widget* flash_;
+
+        ////////////////////////////////////////////////////////////
+        /// The coins. Key is the (x, y) coordinate of the coin
+        /// position in the field.
+        ////////////////////////////////////////////////////////////
+        std::map<std::pair<int, int>, sfe::GameObject*> coins_;
 
     }; // class GameScreen
 
@@ -283,6 +291,8 @@ namespace snake
         easymode_ = true;
         current_effect_ = Effect::None;
         effect_time_ = sf::Time::Zero;
+        event_counter_ = 0;
+        coins_.clear();
 
         // Initialize the listeners.
         init_listeners();
@@ -326,6 +336,7 @@ namespace snake
         EventManager::global().register_event("StartGame");
         EventManager::global().register_event("MovedSnake");
         EventManager::global().register_event("CollectedFood");
+        EventManager::global().register_event("CollectedCoin");
         EventManager::global().register_event("AddSpecialEffect");
         EventManager::global().register_event("ClearSpecialEffects");
         EventManager::global().register_event("GameOver");
@@ -361,20 +372,44 @@ namespace snake
         // Collected food.
         create_and_register_listener(
             [this](Event const & event) {
+                // TODO: Add some points.
                 ++food_counter_;
+                ++event_counter_;
                 spawn_food();
                 step_time_ = 0.9f * (step_time_ - sf::seconds(0.04f)) + sf::seconds(0.04f);
 
                 // In hard mode: Add or remove a special effect.
                 if (!easymode_)
                 {
-                    if ((food_counter_ + 4) % 8 == 0)
+                    if ((event_counter_ + 4) % 8 == 0)
                         sfe::EventManager::global().enqueue("AddSpecialEffect");
-                    if (food_counter_ > 0 && (food_counter_ + 8) % 8 == 0)
+                    if (event_counter_ > 0 && (event_counter_ + 8) % 8 == 0)
                         sfe::EventManager::global().enqueue("ClearSpecialEffects");
                 }
             },
             "CollectedFood"
+        );
+        
+        // Collected coin.
+        create_and_register_listener(
+            [this](Event const & event) {
+                // TODO: Add some points.
+                // Remove the current selected coin.
+                auto it = coins_.find({ snake_head_.x, snake_head_.y });
+                if (it != coins_.end())
+                {
+                    remove_game_object(it->second);
+                    coins_.erase(it);
+                }
+
+                // Spawn a new food item after all coins have been collected.
+                if (coins_.size() == 0)
+                {
+                    event_counter_ += 4;
+                    spawn_food();
+                }
+            },
+            "CollectedCoin"
         );
 
         // Add special effect.
@@ -572,9 +607,12 @@ namespace snake
                 {
                     // Move the snake and spawn an additional body part if food was collected.
                     bool const got_food = fields_(new_head.x, new_head.y) == FieldType::Food;
-                    move_snake(got_food, new_head);
+                    bool const got_coin = fields_(new_head.x, new_head.y) == FieldType::Coin;
+                    move_snake(got_food || got_coin, new_head);
                     if (got_food)
                         sfe::EventManager::global().enqueue("CollectedFood");
+                    else if (got_coin)
+                        sfe::EventManager::global().enqueue("CollectedCoin");
                     else
                         sfe::EventManager::global().enqueue("MovedSnake");
                 }
@@ -741,6 +779,7 @@ namespace snake
                 {
                     fields_(x, y) = FieldType::Food;
                     food_->set_position(field_to_view(x, y));
+                    food_->set_visible(true);
                     return;
                 }
                 ++i;
@@ -773,6 +812,28 @@ namespace snake
         {
             auto flash = std::make_unique<ColorWidget>(sf::Color(0, 0, 0, 255));
             flash_ = get_gui().add_widget(std::move(flash));
+        }
+        else if (current_effect_ == Effect::Coins)
+        {
+            // Hide the food.
+            for (auto & f : fields_)
+                if (f == FieldType::Food)
+                    f = FieldType::Empty;
+            food_->set_visible(false);
+
+            // Spawn the coins.
+            while (snake_body_.size() > 1)
+            {
+                auto const part = snake_body_.back();
+                snake_body_.pop_back();
+                fields_(part.x, part.y) = FieldType::Coin;
+                auto part_ptr = dynamic_cast<ImageObject*>(part.obj);
+                if (part_ptr == nullptr)
+                    throw std::runtime_error("GameScreen::add_special_effect(): Failed to cast snake body part to ImageObject*.");
+                part_ptr->set_filename("img/coin.png");
+                coins_[{part.x, part.y}] = part_ptr;
+            }
+
         }
     }
 
