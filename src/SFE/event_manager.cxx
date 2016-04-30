@@ -6,20 +6,6 @@
 namespace sfe
 {
 
-    //namespace detail
-    //{
-    //    std::set<Event> & registered_events()
-    //    {
-    //        static std::set<Event> instance;
-    //        return instance;
-    //    }
-    //}
-
-    //void register_event(Event && event)
-    //{
-    //    detail::registered_events().emplace(std::forward<Event>(event));
-    //}
-
     Listener::Listener(Callback f)
         :
         callback_(f)
