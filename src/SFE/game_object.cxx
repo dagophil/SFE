@@ -1,5 +1,5 @@
-#include "SFE/game_object.hxx"
-#include "SFE/resource_manager.hxx"
+#include <SFE/game_object.hxx>
+#include <SFE/resource_manager.hxx>
 
 namespace sfe
 {
@@ -88,6 +88,16 @@ namespace sfe
         visible_ = b;
     }
 
+    void GameObject::set_resource_manager(std::shared_ptr<ResourceManager> const & resource_manager)
+    {
+        resource_manager_ = resource_manager;
+    }
+
+    std::shared_ptr<ResourceManager> GameObject::get_resource_manager() const
+    {
+        return resource_manager_;
+    }
+
     ImageObject::ImageObject(std::string const & filename)
         :
         filename_(filename),
@@ -97,7 +107,13 @@ namespace sfe
 
     void ImageObject::render_impl(sf::RenderTarget & target) const
     {
-        auto const & texture = ResourceManager::global().get_texture(filename_);
+        auto const resource_manager = get_resource_manager();
+        if (!resource_manager)
+        {
+            throw ResourceException("Image object cannot render without resource manager.");
+        }
+
+        auto const & texture = resource_manager->get_texture(filename_);
         sf::Sprite spr(texture);
         float rotation_offset = 0;
         if (mirror_x_ && mirror_y_)

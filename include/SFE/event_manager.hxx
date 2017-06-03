@@ -1,11 +1,14 @@
 #ifndef SFE_EVENT_MANAGER_HXX
 #define SFE_EVENT_MANAGER_HXX
 
-#include <vector>
-#include <set>
-#include <queue>
-#include <map>
+#include <SFE/sfestd.hxx>
+
+#include <exception>
 #include <functional>
+#include <map>
+#include <queue>
+#include <set>
+#include <vector>
 
 namespace sfe
 {
@@ -16,14 +19,14 @@ namespace sfe
     ////////////////////////////////////////////////////////////
     /// Event listener that can react to events.
     ////////////////////////////////////////////////////////////
-    class Listener
+    class SFE_API Listener
     {
     public:
 
         ////////////////////////////////////////////////////////////
         /// The callback function type.
         ////////////////////////////////////////////////////////////
-        typedef std::function<void(Event const &)> Callback;
+        typedef std::function<void(Event const&)> Callback;
 
         ////////////////////////////////////////////////////////////
         /// Create a listener that uses the given callback.
@@ -34,19 +37,12 @@ namespace sfe
         /// The destructor unregisters the listener from its event
         /// managers.
         ////////////////////////////////////////////////////////////
-        virtual ~Listener();
+        ~Listener();
 
         ////////////////////////////////////////////////////////////
         /// Set the callback.
         ////////////////////////////////////////////////////////////
         void set_callback(Callback f);
-
-    protected:
-
-        ////////////////////////////////////////////////////////////
-        /// Fire the callback.
-        ////////////////////////////////////////////////////////////
-        virtual void notify(Event const & event) const;
 
     private:
 
@@ -57,15 +53,20 @@ namespace sfe
         friend class EventManager;
 
         ////////////////////////////////////////////////////////////
+        /// Fire the callback.
+        ////////////////////////////////////////////////////////////
+        void notify(Event const& event) const;
+
+        ////////////////////////////////////////////////////////////
         /// Remove the (event_manager, event) pair from registers_.
         ////////////////////////////////////////////////////////////
-        void remove(EventManager* event_manager, Event const & event);
+        void remove(EventManager* event_manager, Event const& event);
 
         ////////////////////////////////////////////////////////////
         /// Keep track of all events managers where the listener is
         /// registered.
         ////////////////////////////////////////////////////////////
-        std::vector<std::pair<EventManager*, Event> > registers_;
+        std::vector<std::pair<EventManager*, Event>> registers_;
 
         ////////////////////////////////////////////////////////////
         /// The notify callback.
@@ -78,7 +79,7 @@ namespace sfe
     /// The event manager can receive events and distribute them
     /// to registered listeners.
     ////////////////////////////////////////////////////////////
-    class EventManager
+    class SFE_API EventManager
     {
     public:
 
@@ -95,12 +96,12 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         /// Register a new listener.
         ////////////////////////////////////////////////////////////
-        void register_listener(Listener & listener, Event const & event = "");
+        void register_listener(Listener & listener, Event const & event = Event());
 
         ////////////////////////////////////////////////////////////
         /// Unregister a listener.
         ////////////////////////////////////////////////////////////
-        void unregister_listener(Listener & listener, Event const & event = "");
+        void unregister_listener(Listener & listener, Event const & event = Event());
 
         ////////////////////////////////////////////////////////////
         /// Add a new event to the queue.
@@ -151,6 +152,11 @@ namespace sfe
         std::set<Event> registered_events_;
 
     }; // class EventManager
+
+    ////////////////////////////////////////////////////////////
+    /// Exception class for all event exceptions.
+    ////////////////////////////////////////////////////////////
+    DECLARE_EXCEPTION(EventException);
 
 } // namespace sfe
 

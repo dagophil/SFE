@@ -4,6 +4,16 @@ project(sfelibrary)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/config)
 
+# Allow to build shared libraries.
+set(SFE_BUILD_SHARED OFF CACHE BOOL "Build shared library")
+if (${SFE_BUILD_SHARED})
+    set(LIBRARY_TYPE SHARED)
+    add_definitions(-DSFE_DYNAMIC)
+else()
+    set(LIBRARY_TYPE "")
+    add_definitions(-DSFE_STATIC)
+endif()
+
 # SFE includes
 set(SFE_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
 include_directories(${SFE_INCLUDE_DIR})

@@ -1,16 +1,19 @@
 #ifndef SFE_GAME_HXX
 #define SFE_GAME_HXX
 
-#include <SFML/Graphics.hpp>
+#include <SFE/sfestd.hxx>
+#include <SFE/screen.hxx>
 
-#include "screen.hxx"
+#include <SFML/Graphics.hpp>
 
 namespace sfe
 {
+    class ResourceManager;
+
     ////////////////////////////////////////////////////////////
     /// Base class for all game applications.
     ////////////////////////////////////////////////////////////
-    class Game
+    class SFE_API Game
     {
     public:
 
@@ -51,6 +54,11 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         void load_screen(std::unique_ptr<Screen> new_screen, bool change_to_default_view = true);
 
+        ////////////////////////////////////////////////////////////
+        /// Returns the resource manager.
+        ////////////////////////////////////////////////////////////
+        std::shared_ptr<ResourceManager> get_resource_manager() const;
+
     private:
 
         ////////////////////////////////////////////////////////////
@@ -74,7 +82,17 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         sf::Clock clock_;
 
+        ////////////////////////////////////////////////////////////
+        /// The resource manager.
+        ////////////////////////////////////////////////////////////
+        std::shared_ptr<ResourceManager> resource_manager_;
+
     }; // class Game
+
+    ////////////////////////////////////////////////////////////
+    /// Exception class for all game exceptions.
+    ////////////////////////////////////////////////////////////
+    DECLARE_EXCEPTION(GameException);
 
 } // namespace sfe
 

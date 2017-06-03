@@ -1,9 +1,11 @@
 #ifndef SFE_INPUT_HXX
 #define SFE_INPUT_HXX
 
-#include <array>
+#include <SFE/sfestd.hxx>
 
 #include <SFML/Window.hpp>
+
+#include <array>
 
 namespace sfe
 {
@@ -11,7 +13,7 @@ namespace sfe
     /// The keyboard class keeps track of the keys that were
     /// pressed since the last frame.
     ////////////////////////////////////////////////////////////
-    class Input
+    class SFE_API Input
     {
     public:
 

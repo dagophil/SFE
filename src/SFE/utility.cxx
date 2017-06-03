@@ -1,6 +1,6 @@
-#include <boost/filesystem.hpp>
+#include <SFE/utility.hxx>
 
-#include "SFE/utility.hxx"
+#include <boost/filesystem.hpp>
 
 namespace sfe
 {

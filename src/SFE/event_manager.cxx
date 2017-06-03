@@ -1,14 +1,13 @@
-#include <algorithm>
-#include <set>
+#include <SFE/event_manager.hxx>
 
-#include "SFE/event_manager.hxx"
+#include <algorithm>
 
 namespace sfe
 {
 
     Listener::Listener(Callback f)
         :
-        callback_(f)
+        callback_(std::move(f))
     {}
 
     Listener::~Listener()
@@ -31,10 +30,10 @@ namespace sfe
 
     void Listener::set_callback(Callback f)
     {
-        callback_ = f;
+        callback_ = std::move(f);
     }
 
-    void Listener::notify(Event const & event) const
+    void Listener::notify(Event const& event) const
     {
         callback_(event);
     }
@@ -61,7 +60,7 @@ namespace sfe
     {
 #ifdef CHECKEVENTTYPE
         if (registered_events_.count(event) == 0)
-            throw std::runtime_error("EventManager::register_listener(): Tried to register a listener for an unregistered event.");
+            throw EventException("EventManager::register_listener(): Tried to register a listener for an unregistered event.");
 #endif
         listener.registers_.push_back({ this, event });
         listeners_[event].push_back(&listener);
@@ -82,7 +81,7 @@ namespace sfe
     {
 #ifdef CHECKEVENTTYPE
         if (registered_events_.count(event) == 0)
-            throw std::runtime_error("EventManager::enqueue(): Tried to post an unregistered event.");
+            throw EventException("EventManager::enqueue(): Tried to post an unregistered event.");
 #endif
         event_queue_.push(std::forward<Event>(event));
     }

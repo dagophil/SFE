@@ -1,11 +1,13 @@
 #ifndef SFE_RESOURCE_MANAGER_HXX
 #define SFE_RESOURCE_MANAGER_HXX
 
-#include <string>
-#include <map>
-#include <iostream>
+#include <SFE/sfestd.hxx>
 
 #include <SFML/Graphics.hpp>
+
+#include <iostream>
+#include <map>
+#include <string>
 
 namespace sfe
 {
@@ -13,19 +15,9 @@ namespace sfe
     /// The resource manager ensures that files such as images,
     /// sounds, etc. are loaded only once.
     ////////////////////////////////////////////////////////////
-    class ResourceManager
+    class SFE_API ResourceManager
     {
     public:
-
-        ////////////////////////////////////////////////////////////
-        /// The global resource manager.
-        ////////////////////////////////////////////////////////////
-        static ResourceManager & global();
-
-        ////////////////////////////////////////////////////////////
-        /// Default constructor.
-        ////////////////////////////////////////////////////////////
-        ResourceManager() = default;
 
         ////////////////////////////////////////////////////////////
         /// If a texture with the given name is already stored, it
@@ -42,6 +34,11 @@ namespace sfe
         std::map<std::string, sf::Texture> textures_;
 
     }; // class ResourceManager
+
+    ////////////////////////////////////////////////////////////
+    /// Exception class for all resource exceptions.
+    ////////////////////////////////////////////////////////////
+    DECLARE_EXCEPTION(ResourceException);
 
 } // namespace sfe
 

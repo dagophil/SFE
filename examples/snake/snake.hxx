@@ -35,7 +35,7 @@ namespace snake
     {
         init_ = [this]()
         {
-            load_screen(std::make_unique<GameScreen>());
+            load_screen(std::make_unique<GameScreen>(get_resource_manager()));
         };
     }
 

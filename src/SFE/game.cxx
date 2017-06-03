@@ -1,12 +1,14 @@
-#include "SFE/game.hxx"
-#include "SFE/input.hxx"
-#include "SFE/event_manager.hxx"
+#include <SFE/game.hxx>
+#include <SFE/event_manager.hxx>
+#include <SFE/input.hxx>
+#include <SFE/resource_manager.hxx>
 
 namespace sfe
 {
     Game::Game(unsigned int width, unsigned int height, std::string const & title, sf::Uint32 style)
         :
-        window_(sf::VideoMode(width, height), title, style)
+        window_(sf::VideoMode(width, height), title, style),
+        resource_manager_(std::make_shared<ResourceManager>())
     {}
 
     void Game::run()
@@ -19,7 +21,7 @@ namespace sfe
         if (requested_screen_)
             screen_ = std::move(requested_screen_);
         if (!screen_)
-            throw std::runtime_error("Game::run(): You must load a screen before running the game.");
+            throw GameException("Game::run(): You must load a screen before running the game.");
         if (screen_->init_)
             screen_->init_();
 
@@ -82,5 +84,9 @@ namespace sfe
             float const ratio = window_.getSize().x / static_cast<float>(window_.getSize().y);
             requested_screen_->set_game_view(sf::View({ -ratio, -1, 2 * ratio, 2 }));
         }
+    }
+    std::shared_ptr<ResourceManager> Game::get_resource_manager() const
+    {
+        return resource_manager_;
     }
 }

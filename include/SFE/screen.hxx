@@ -1,25 +1,29 @@
 #ifndef SFE_SCREEN_HXX
 #define SFE_SCREEN_HXX
 
-#include <vector>
+#include <SFE/sfestd.hxx>
+#include <SFE/event_manager.hxx>
+#include <SFE/game_object.hxx>
+#include <SFE/widget.hxx>
 
-#include "game_object.hxx"
-#include "widget.hxx"
-#include "event_manager.hxx"
+#include <memory>
+#include <vector>
 
 namespace sfe
 {
+    class ResourceManager;
+
     ////////////////////////////////////////////////////////////
     /// A screen holds the gui widgets and the game objects.
     ////////////////////////////////////////////////////////////
-    class Screen
+    class SFE_API Screen
     {
     public:
 
         ////////////////////////////////////////////////////////////
         /// Construct a screen with the given game view.
         ////////////////////////////////////////////////////////////
-        Screen(sf::View game_view);
+        Screen(sf::View game_view, std::shared_ptr<ResourceManager> resource_manager);
 
         ////////////////////////////////////////////////////////////
         /// Virtual default destructor.
@@ -132,7 +136,17 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         std::vector<std::unique_ptr<Listener> > listeners_;
 
+        ////////////////////////////////////////////////////////////
+        /// The resource manager.
+        ////////////////////////////////////////////////////////////
+        std::shared_ptr<ResourceManager> resource_manager_;
+
     }; // class Screen
+
+    ////////////////////////////////////////////////////////////
+    /// Exception class for all screen exceptions.
+    ////////////////////////////////////////////////////////////
+    DECLARE_EXCEPTION(ScreenException);
 
     template <typename... Args>
     inline void Screen::create_and_register_listener(Listener::Callback f, Args && ... args)

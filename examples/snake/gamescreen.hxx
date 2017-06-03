@@ -1,8 +1,11 @@
 #ifndef SFE_EXAMPLE_SNAKE_GAMESCREEN_HXX
 #define SFE_EXAMPLE_SNAKE_GAMESCREEN_HXX
 
-#include <SFE/screen.hxx>
 #include <SFE/game_object.hxx>
+#include <SFE/resource_manager.hxx>
+#include <SFE/screen.hxx>
+
+#include <memory>
 
 namespace snake
 {
@@ -36,7 +39,7 @@ namespace snake
         ////////////////////////////////////////////////////////////
         /// The default constructor.
         ////////////////////////////////////////////////////////////
-        GameScreen();
+        GameScreen(std::shared_ptr<sfe::ResourceManager> resource_manager);
 
     private:
 
@@ -252,9 +255,9 @@ namespace snake
 
     }; // class GameScreen
 
-    inline GameScreen::GameScreen()
+    inline GameScreen::GameScreen(std::shared_ptr<sfe::ResourceManager> resource_manager)
         :
-        Screen(sf::View()),
+        Screen(sf::View(), resource_manager),
         fields_(num_fields_x, num_fields_y, FieldType::Empty),
         rand_engine_(std::random_device()())
     {
@@ -829,7 +832,7 @@ namespace snake
                 fields_(part.x, part.y) = FieldType::Coin;
                 auto part_ptr = dynamic_cast<ImageObject*>(part.obj);
                 if (part_ptr == nullptr)
-                    throw std::runtime_error("GameScreen::add_special_effect(): Failed to cast snake body part to ImageObject*.");
+                    throw ScreenException("GameScreen::add_special_effect(): Failed to cast snake body part to ImageObject*.");
                 part_ptr->set_filename("img/coin.png");
                 coins_[{part.x, part.y}] = part_ptr;
             }

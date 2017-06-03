@@ -1,4 +1,4 @@
-#include "SFE/input.hxx"
+#include <SFE/input.hxx>
 
 namespace sfe
 {

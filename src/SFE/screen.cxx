@@ -1,14 +1,18 @@
-#include <algorithm>
+#include <SFE/screen.hxx>
+#include <SFE/resource_manager.hxx>
+#include <SFE/utility.hxx>
 
-#include "SFE/screen.hxx"
-#include "SFE/utility.hxx"
+#include <algorithm>
 
 namespace sfe
 {
-    Screen::Screen(sf::View game_view)
+    Screen::Screen(sf::View game_view, std::shared_ptr<ResourceManager> resource_manager)
         :
-        game_view_(game_view)
-    {}
+        game_view_(game_view),
+        resource_manager_(resource_manager)
+    {
+        gui_.set_resource_manager(resource_manager_);
+    }
 
     void Screen::update(sf::RenderWindow const & window, sf::Time elapsed_time)
     {
@@ -71,6 +75,7 @@ namespace sfe
     GameObject* Screen::add_game_object(std::unique_ptr<GameObject> obj)
     {
         auto ptr = obj.get();
+        ptr->set_resource_manager(resource_manager_);
         game_objects_.push_back(std::move(obj));
         return ptr;
     }

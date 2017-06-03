@@ -1,10 +1,11 @@
-#include <iostream>
+#include <SFE/input.hxx>
+#include <SFE/resource_manager.hxx>
+#include <SFE/screen.hxx>
+#include <SFE/widget.hxx>
 
 #include <SFML/Graphics.hpp>
 
-#include <SFE/screen.hxx>
-#include <SFE/widget.hxx>
-#include <SFE/input.hxx>
+#include <iostream>
 
 void create_widgets(sfe::Widget & container)
 {
@@ -61,8 +62,10 @@ int main()
     unsigned int const WIDTH = 800;
     unsigned int const HEIGHT = 600;
 
+    auto resource_manager = std::make_shared<ResourceManager>();
+
     // Create the screen with some widgets.
-    Screen screen(sf::View({ 0, 0, 1, 1 }));
+    Screen screen(sf::View({ 0, 0, 1, 1 }), resource_manager);
     create_widgets(screen.get_gui());
 
     // Create a clock to measure the elapsed time per frame.
