@@ -1,10 +1,14 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 
 project(sfelibrary)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/config)
-include_directories(${CMAKE_SOURCE_DIR}/include)
 
+# SFE includes
+set(SFE_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
+include_directories(${SFE_INCLUDE_DIR})
+
+# Boost
 find_package(Boost 1.6.0 COMPONENTS REQUIRED system filesystem)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
@@ -16,18 +20,32 @@ include_directories(${SFML_INCLUDE_DIR})
 
 # Define a copy file makro.
 macro(copyfile tar filename)
-	add_custom_command(TARGET ${tar} PRE_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy
-                   ${CMAKE_CURRENT_SOURCE_DIR}/${filename} ${CMAKE_CURRENT_BINARY_DIR}/${filename})
+    add_custom_command(TARGET ${tar} PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_CURRENT_SOURCE_DIR}/${filename} ${CMAKE_CURRENT_BINARY_DIR}/${filename})
 endmacro()
 
 # Define a copy directory makro.
-MACRO(copydir tar dirname)
-	ADD_CUSTOM_COMMAND(TARGET ${tar} PRE_BUILD
-					COMMAND ${CMAKE_COMMAND} -E copy_directory
-					${CMAKE_CURRENT_SOURCE_DIR}/${dirname} ${CMAKE_CURRENT_BINARY_DIR}/${dirname})
-ENDMACRO()
+macro(copydir tar dirname)
+    add_custom_command(TARGET ${tar} PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/${dirname} ${CMAKE_CURRENT_BINARY_DIR}/${dirname})
+endmacro()
 
+# Define a macro to build file lists.
+macro(globfiles tar dirname extension)
+    file(GLOB ${tar}
+        "${dirname}/*${extension}"
+        "${dirname}/*/*${extension}"
+        "${dirname}/*/*/*${extension}"
+        "${dirname}/*/*/*/*${extension}"
+        "${dirname}/*/*/*/*/*${extension}"
+        "${dirname}/*/*/*/*/*/*${extension}"
+        "${dirname}/*/*/*/*/*/*/*${extension}"
+        "${dirname}/*/*/*/*/*/*/*/*${extension}")
+endmacro()
+
+# Check the event types in debug mode.
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DCHECKEVENTTYPE")
 
 add_subdirectory(src)
