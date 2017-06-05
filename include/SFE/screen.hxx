@@ -93,12 +93,6 @@ namespace sfe
         void add_listener(std::shared_ptr<Listener> listener);
 
         ////////////////////////////////////////////////////////////
-        /// Create a listener with the given callback and register
-        /// it to all events in args.
-        ////////////////////////////////////////////////////////////
-        void create_and_register_listener(Event const& event, Listener::Callback f);
-
-        ////////////////////////////////////////////////////////////
         /// Remove all event listeners.
         ////////////////////////////////////////////////////////////
         void clear_listeners();

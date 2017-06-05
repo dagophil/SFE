@@ -345,6 +345,12 @@ namespace snake
         EventManager::global().register_event(Event("SoundOn"));
         EventManager::global().register_event(Event("SoundOff"));
 
+        auto create_and_register_listener = [&](Event const& event, Listener::Callback f)
+        {
+            auto listener = EventManager::global().register_listener(event, f);
+            add_listener(std::move(listener));
+        };
+
         // Select easy difficulty.
         create_and_register_listener(
             Event("SelectEasyDifficulty"),
