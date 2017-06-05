@@ -38,18 +38,6 @@ namespace sfe
         sf::RenderWindow const & get_window() const;
 
         ////////////////////////////////////////////////////////////
-        /// The initialization method, which is automatically called
-        /// at the beginning of run().
-        ////////////////////////////////////////////////////////////
-        std::function<void()> init_;
-
-        ////////////////////////////////////////////////////////////
-        /// The update method, which is automatically called once
-        /// per frame.
-        ////////////////////////////////////////////////////////////
-        std::function<void(sf::Time)> update_;
-
-        ////////////////////////////////////////////////////////////
         /// Load the given screen.
         ////////////////////////////////////////////////////////////
         void load_screen(std::unique_ptr<Screen> new_screen, bool change_to_default_view = true);
@@ -60,6 +48,18 @@ namespace sfe
         std::shared_ptr<ResourceManager> get_resource_manager() const;
 
     private:
+
+        ////////////////////////////////////////////////////////////
+        /// The concrete initialization of the derived class, which
+        /// is called at the beginning of run().
+        ////////////////////////////////////////////////////////////
+        virtual void init_impl() = 0;
+
+        ////////////////////////////////////////////////////////////
+        /// The concrete update of the derived class, which is
+        /// called once per frame.
+        ////////////////////////////////////////////////////////////
+        virtual void update_impl(sf::Time const& elapsed_time) = 0;
 
         ////////////////////////////////////////////////////////////
         /// The current screen.

@@ -20,24 +20,22 @@ namespace snake
     {
     public:
 
+        using Game::Game;
+
+    private:
+
         ////////////////////////////////////////////////////////////
-        /// Create a snake game.
+        /// Load the game screen.
         ////////////////////////////////////////////////////////////
-        template <typename... Args>
-        SnakeGame(Args && ... args);
+        virtual void init_impl() override;
+
+        ////////////////////////////////////////////////////////////
+        /// The update function is empty, because the logic is
+        /// implemented with events.
+        ////////////////////////////////////////////////////////////
+        virtual void update_impl(sf::Time const& elapsed_time) override;
 
     }; // class SnakeGame
-
-    template <typename... Args>
-    SnakeGame::SnakeGame(Args && ... args)
-        :
-        Game(args...)
-    {
-        init_ = [this]()
-        {
-            load_screen(std::make_unique<GameScreen>(get_resource_manager()));
-        };
-    }
 
 } // namespace snake
 

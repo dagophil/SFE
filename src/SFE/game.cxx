@@ -14,8 +14,7 @@ namespace sfe
     void Game::run()
     {
         // Initialize the components.
-        if (init_)
-            init_();
+        init_impl();
 
         // Load the first screen.
         if (requested_screen_)
@@ -53,8 +52,7 @@ namespace sfe
             screen_->update(window_, elapsed_time);
 
             // Call the concrete update method.
-            if (update_)
-                update_(elapsed_time);
+            update_impl(elapsed_time);
 
             // Handle all events.
             EventManager::global().dispatch();

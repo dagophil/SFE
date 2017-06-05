@@ -11,3 +11,11 @@ int main()
     snake_game.get_window().setFramerateLimit(60);
     snake_game.run();
 }
+
+void snake::SnakeGame::init_impl()
+{
+    load_screen(std::make_unique<GameScreen>(get_resource_manager()));
+}
+
+void snake::SnakeGame::update_impl(sf::Time const & elapsed_time)
+{}
