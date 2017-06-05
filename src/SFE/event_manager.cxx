@@ -10,15 +10,6 @@ namespace sfe
         callback_(std::move(f))
     {}
 
-    Listener::~Listener()
-    {
-        // Remove the listener from all event managers.
-        for (auto const & p : registers_)
-        {
-            p.first->remove(this, p.second);
-        }
-    }
-
     void Listener::remove(EventManager* event_manager, Event const & event)
     {
         // Remove the event manager from the internal list.
@@ -35,7 +26,8 @@ namespace sfe
 
     void Listener::notify(Event const& event) const
     {
-        callback_(event);
+        if (callback_)
+            callback_(event);
     }
 
     EventManager & EventManager::global()
@@ -44,32 +36,15 @@ namespace sfe
         return instance;
     }
 
-    EventManager::~EventManager()
-    {
-        // Remove the event manager from all listeners.
-        for (auto const & p : listeners_)
-        {
-            for (auto & listener : p.second)
-            {
-                listener->remove(this, p.first);
-            }
-        }
-    }
-
-    void EventManager::register_listener(Listener & listener, Event const & event)
+    std::shared_ptr<Listener> EventManager::register_listener(Event const & event, Listener::Callback callback)
     {
 #ifdef CHECKEVENTTYPE
         if (registered_events_.count(event) == 0)
             throw EventException("EventManager::register_listener(): Tried to register a listener for an unregistered event.");
 #endif
-        listener.registers_.push_back({ this, event });
-        listeners_[event].push_back(&listener);
-    }
-
-    void EventManager::unregister_listener(Listener & listener, Event const & event)
-    {
-        listener.remove(this, event);
-        remove(&listener, event);
+        auto listener = std::make_shared<Listener>(callback);
+        listeners_[event].emplace_back(listener);
+        return listener;
     }
 
     void EventManager::enqueue(Event const & event)
@@ -88,15 +63,33 @@ namespace sfe
 
     void EventManager::dispatch()
     {
+        // Erase all listeners that were destroyed.
+        for (auto & event_listeners : listeners_)
+        {
+            auto & listener_vector = event_listeners.second;
+            auto const it = std::remove_if(
+                listener_vector.begin(),
+                listener_vector.end(),
+                [](std::weak_ptr<Listener> const& l)
+            {
+                return l.expired();
+            });
+            listener_vector.erase(it, listener_vector.end());
+        }
+
         while (!event_queue_.empty())
         {
             auto const & ev = event_queue_.front();
 
-            // Iterate over a copy , so listeners can be removed from inside the loop.
-            auto listeners = listeners_[ev];
-            for (auto l : listeners)
+            // Iterate over a copy because the callbacks may add new listeners,
+            // and we do not want to change a container while iterating.
+            auto event_listeners = listeners_[ev];
+            for (auto const& l : event_listeners)
             {
-                l->notify(ev);
+                if (auto s = l.lock())
+                {
+                    s->notify(ev);
+                }
             }
             event_queue_.pop();
         }
@@ -105,19 +98,6 @@ namespace sfe
     void EventManager::register_event(Event const & event)
     {
         registered_events_.insert(event);
-    }
-
-    void EventManager::remove(Listener* listener, Event const & event)
-    {
-        // Remove the listener from the internal list.
-        auto it = listeners_.find(event);
-        if (it != listeners_.end())
-        {
-            it->second.erase(
-                std::remove(it->second.begin(), it->second.end(), listener),
-                it->second.end()
-            );
-        }
     }
 
 } // namespace sfe

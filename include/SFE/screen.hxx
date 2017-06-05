@@ -90,14 +90,13 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         /// Add an event listener.
         ////////////////////////////////////////////////////////////
-        void add_listener(std::unique_ptr<Listener> listener);
+        void add_listener(std::shared_ptr<Listener> listener);
 
         ////////////////////////////////////////////////////////////
         /// Create a listener with the given callback and register
         /// it to all events in args.
         ////////////////////////////////////////////////////////////
-        template <typename... Args>
-        void create_and_register_listener(Listener::Callback f, Args && ... args);
+        void create_and_register_listener(Event const& event, Listener::Callback f);
 
         ////////////////////////////////////////////////////////////
         /// Remove all event listeners.
@@ -134,7 +133,7 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         /// A container for event listeners.
         ////////////////////////////////////////////////////////////
-        std::vector<std::unique_ptr<Listener> > listeners_;
+        std::vector<std::shared_ptr<Listener> > listeners_;
 
         ////////////////////////////////////////////////////////////
         /// The resource manager.
@@ -147,16 +146,6 @@ namespace sfe
     /// Exception class for all screen exceptions.
     ////////////////////////////////////////////////////////////
     DECLARE_EXCEPTION(ScreenException);
-
-    template <typename... Args>
-    inline void Screen::create_and_register_listener(Listener::Callback f, Args && ... args)
-    {
-        auto listener = std::make_unique<Listener>(f);
-        std::vector<Event> const events = { args... };
-        for (auto const & ev : events)
-            EventManager::global().register_listener(*listener, ev);
-        add_listener(std::move(listener));
-    }
 
 } // namespace sfe
 

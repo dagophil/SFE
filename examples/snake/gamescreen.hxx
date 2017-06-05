@@ -326,7 +326,6 @@ namespace snake
         food->set_size(field_width, field_height);
         food_ = add_game_object(std::move(food));
         spawn_food();
-        
     }
 
     inline void GameScreen::init_listeners()
@@ -348,32 +347,33 @@ namespace snake
 
         // Select easy difficulty.
         create_and_register_listener(
+            Event("SelectEasyDifficulty"),
             [this](Event const & event) {
                 easymode_ = true;
-            },
-            "SelectEasyDifficulty"
+            }
         );
 
         // Select hard difficulty.
         create_and_register_listener(
+            Event("SelectHardDifficulty"),
             [this](Event const & event) {
                 easymode_ = false;
-            },
-            "SelectHardDifficulty"
+            }
         );
 
         // Start the game.
         create_and_register_listener(
+            Event("StartGame"),
             [this](Event const & event) {
                 if (!easymode_)
                     step_time_ = sf::seconds(0.1f);
                 running_ = true;
-            },
-            "StartGame"
+            }
         );
 
         // Collected food.
         create_and_register_listener(
+            Event("CollectedFood"),
             [this](Event const & event) {
                 // TODO: Add some points.
                 ++food_counter_;
@@ -389,12 +389,12 @@ namespace snake
                     if (event_counter_ > 0 && (event_counter_ + 8) % 8 == 0)
                         sfe::EventManager::global().enqueue("ClearSpecialEffects");
                 }
-            },
-            "CollectedFood"
+            }
         );
         
         // Collected coin.
         create_and_register_listener(
+            Event("CollectedCoin"),
             [this](Event const & event) {
                 // TODO: Add some points.
                 // Remove the current selected coin.
@@ -411,47 +411,46 @@ namespace snake
                     event_counter_ += 4;
                     spawn_food();
                 }
-            },
-            "CollectedCoin"
+            }
         );
 
         // Add special effect.
         create_and_register_listener(
+            Event("AddSpecialEffect"),
             [this](Event const & event) {
                 add_special_effect();
-            },
-            "AddSpecialEffect"
+            }
         );
 
         // Clear special effects.
         create_and_register_listener(
+            Event("ClearSpecialEffects"),
             [this](Event const & event) {
                 clear_special_effects();
-            },
-            "ClearSpecialEffects"
+            }
         );
 
         // Game over.
         create_and_register_listener(
+            Event("GameOver"),
             [this](Event const & event) {
                 std::cout << "Game over." << std::endl;
                 std::cout << "You collected " << food_counter_ << " food." << std::endl;
                 init_impl();
-            },
-            "GameOver"
+            }
         );
 
         create_and_register_listener(
+            Event("SoundOn"),
             [](Event const & event) {
                 std::cout << "Sound ON!" << std::endl;
-            },
-            "SoundOn"
+            }
         );
         create_and_register_listener(
+            Event("SoundOff"),
             [](Event const & event) {
                 std::cout << "Sound OFF!" << std::endl;
-            },
-            "SoundOff"
+            }
         );
     }
 
@@ -464,12 +463,12 @@ namespace snake
         auto container_ptr = get_gui().add_widget(std::move(difficulty_container));
         container_ptr->set_align_y(AlignY::Center);
         container_ptr->set_height(0.4f);
-        auto difficulty_remover = std::make_unique<Listener>(
-            [container_ptr](Event const & event) {
-                container_ptr->remove_from_parent();
-            }
-        );
-        EventManager::global().register_listener(*difficulty_remover, "StartGame");
+        auto difficulty_remover = EventManager::global().register_listener(
+            Event("StartGame"),
+            [container_ptr](Event const& event)
+        {
+            container_ptr->remove_from_parent();
+        });
         container_ptr->add_listener(std::move(difficulty_remover));
 
         // Create the box for the currently selected item.
@@ -479,19 +478,19 @@ namespace snake
         frame_ptr->set_align_y(AlignY::Top);
         frame_ptr->set_height(0.5f);
         frame_ptr->set_scale(Scale::X);
-        auto frame_easy_selector = std::make_unique<Listener>(
-            [frame_ptr](Event const & event) {
-                frame_ptr->set_align_y(AlignY::Top);
-            }
-        );
-        EventManager::global().register_listener(*frame_easy_selector, "SelectEasyDifficulty");
+        auto frame_easy_selector = EventManager::global().register_listener(
+            Event("SelectEasyDifficulty"),
+            [frame_ptr](Event const& event)
+        {
+            frame_ptr->set_align_y(AlignY::Top);
+        });
         frame_ptr->add_listener(std::move(frame_easy_selector));
-        auto frame_hard_selector = std::make_unique<Listener>(
-            [frame_ptr](Event const & event) {
-                frame_ptr->set_align_y(AlignY::Bottom);
-            }
-        );
-        EventManager::global().register_listener(*frame_hard_selector, "SelectHardDifficulty");
+        auto frame_hard_selector = EventManager::global().register_listener(
+            Event("SelectHardDifficulty"),
+            [frame_ptr](Event const& event)
+        {
+            frame_ptr->set_align_y(AlignY::Bottom);
+        });
         frame_ptr->add_listener(std::move(frame_hard_selector));
 
         // Create the "easy" text.
@@ -561,14 +560,20 @@ namespace snake
             });
 
             // Toggle the visibility on a sound toggle event.
-            auto sound_toggle_listener = std::make_unique<Listener>(
-                [ptr](Event const & event) {
-                    ptr->set_visible(!ptr->get_visible());
-                }
+            auto sound_toggle = [ptr](Event const& event)
+            {
+                ptr->set_visible(!ptr->get_visible());
+            };
+            auto sound_on_listener = EventManager::global().register_listener(
+                Event("SoundOn"),
+                sound_toggle
             );
-            EventManager::global().register_listener(*sound_toggle_listener, "SoundOn");
-            EventManager::global().register_listener(*sound_toggle_listener, "SoundOff");
-            ptr->add_listener(std::move(sound_toggle_listener));
+            ptr->add_listener(std::move(sound_on_listener));
+            auto sound_off_listener = EventManager::global().register_listener(
+                Event("SoundOff"),
+                sound_toggle
+            );
+            ptr->add_listener(std::move(sound_off_listener));
         }
 
         // If this click callback would be added to all sound icon widgets,

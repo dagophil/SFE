@@ -119,9 +119,15 @@ namespace sfe
         game_view_ = view;
     }
 
-    void Screen::add_listener(std::unique_ptr<Listener> listener)
+    void Screen::add_listener(std::shared_ptr<Listener> listener)
     {
         listeners_.push_back(std::move(listener));
+    }
+
+    void Screen::create_and_register_listener(Event const & event, Listener::Callback f)
+    {
+        auto listener = EventManager::global().register_listener(event, f);
+        add_listener(std::move(listener));
     }
 
     void Screen::clear_listeners()

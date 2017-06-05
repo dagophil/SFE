@@ -3,9 +3,9 @@
 
 #include <SFE/sfestd.hxx>
 
-#include <exception>
 #include <functional>
 #include <map>
+#include <memory>
 #include <queue>
 #include <set>
 #include <vector>
@@ -34,28 +34,16 @@ namespace sfe
         Listener(Callback f);
 
         ////////////////////////////////////////////////////////////
-        /// The destructor unregisters the listener from its event
-        /// managers.
-        ////////////////////////////////////////////////////////////
-        ~Listener();
-
-        ////////////////////////////////////////////////////////////
         /// Set the callback.
         ////////////////////////////////////////////////////////////
         void set_callback(Callback f);
-
-    private:
-
-        ////////////////////////////////////////////////////////////
-        /// The event manager class needs to be able to change the
-        /// registers_ field on register or unregister calls.
-        ////////////////////////////////////////////////////////////
-        friend class EventManager;
 
         ////////////////////////////////////////////////////////////
         /// Fire the callback.
         ////////////////////////////////////////////////////////////
         void notify(Event const& event) const;
+
+    private:
 
         ////////////////////////////////////////////////////////////
         /// Remove the (event_manager, event) pair from registers_.
@@ -89,19 +77,9 @@ namespace sfe
         static EventManager & global();
 
         ////////////////////////////////////////////////////////////
-        /// The destructor unregisters all listeners.
+        /// Register a new listener to the event and return it.
         ////////////////////////////////////////////////////////////
-        ~EventManager();
-
-        ////////////////////////////////////////////////////////////
-        /// Register a new listener.
-        ////////////////////////////////////////////////////////////
-        void register_listener(Listener & listener, Event const & event = Event());
-
-        ////////////////////////////////////////////////////////////
-        /// Unregister a listener.
-        ////////////////////////////////////////////////////////////
-        void unregister_listener(Listener & listener, Event const & event = Event());
+        std::shared_ptr<Listener> register_listener(Event const & event, Listener::Callback callback);
 
         ////////////////////////////////////////////////////////////
         /// Add a new event to the queue.
@@ -126,20 +104,9 @@ namespace sfe
     private:
 
         ////////////////////////////////////////////////////////////
-        /// The listener needs to be able to change the listeners_
-        /// field of the event manager.
-        ////////////////////////////////////////////////////////////
-        friend class Listener;
-
-        ////////////////////////////////////////////////////////////
-        /// Remove the (event, listener) pair from listeners_.
-        ////////////////////////////////////////////////////////////
-        void remove(Listener* listener, Event const & event);
-
-        ////////////////////////////////////////////////////////////
         /// The registered listeners.
         ////////////////////////////////////////////////////////////
-        std::map<Event, std::vector<Listener*> > listeners_;
+        std::map<Event, std::vector<std::weak_ptr<Listener>>> listeners_;
 
         ////////////////////////////////////////////////////////////
         /// The enqueued events.
