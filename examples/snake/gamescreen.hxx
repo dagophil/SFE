@@ -333,17 +333,17 @@ namespace snake
         using namespace sfe;
 
         // Register the event types.
-        EventManager::global().register_event("SelectEasyDifficulty");
-        EventManager::global().register_event("SelectHardDifficulty");
-        EventManager::global().register_event("StartGame");
-        EventManager::global().register_event("MovedSnake");
-        EventManager::global().register_event("CollectedFood");
-        EventManager::global().register_event("CollectedCoin");
-        EventManager::global().register_event("AddSpecialEffect");
-        EventManager::global().register_event("ClearSpecialEffects");
-        EventManager::global().register_event("GameOver");
-        EventManager::global().register_event("SoundOn");
-        EventManager::global().register_event("SoundOff");
+        EventManager::global().register_event(Event("SelectEasyDifficulty"));
+        EventManager::global().register_event(Event("SelectHardDifficulty"));
+        EventManager::global().register_event(Event("StartGame"));
+        EventManager::global().register_event(Event("MovedSnake"));
+        EventManager::global().register_event(Event("CollectedFood"));
+        EventManager::global().register_event(Event("CollectedCoin"));
+        EventManager::global().register_event(Event("AddSpecialEffect"));
+        EventManager::global().register_event(Event("ClearSpecialEffects"));
+        EventManager::global().register_event(Event("GameOver"));
+        EventManager::global().register_event(Event("SoundOn"));
+        EventManager::global().register_event(Event("SoundOff"));
 
         // Select easy difficulty.
         create_and_register_listener(
@@ -385,9 +385,9 @@ namespace snake
                 if (!easymode_)
                 {
                     if ((event_counter_ + 4) % 8 == 0)
-                        sfe::EventManager::global().enqueue("AddSpecialEffect");
+                        sfe::EventManager::global().enqueue(Event("AddSpecialEffect"));
                     if (event_counter_ > 0 && (event_counter_ + 8) % 8 == 0)
-                        sfe::EventManager::global().enqueue("ClearSpecialEffects");
+                        sfe::EventManager::global().enqueue(Event("ClearSpecialEffects"));
                 }
             }
         );
@@ -500,10 +500,10 @@ namespace snake
         easy->set_height(0.5f);
         easy->set_scale(Scale::X);
         easy->add_mouse_enter_callback([frame_ptr](Widget & w) {
-            EventManager::global().enqueue("SelectEasyDifficulty");
+            EventManager::global().enqueue(Event("SelectEasyDifficulty"));
         });
         easy->add_click_end_callback([this](Widget & w) {
-            EventManager::global().enqueue("StartGame");
+            EventManager::global().enqueue(Event("StartGame"));
         });
         container_ptr->add_widget(std::move(easy));
 
@@ -514,10 +514,10 @@ namespace snake
         hard->set_height(0.5f);
         hard->set_scale(Scale::X);
         hard->add_mouse_enter_callback([frame_ptr](Widget & w) {
-            EventManager::global().enqueue("SelectHardDifficulty");
+            EventManager::global().enqueue(Event("SelectHardDifficulty"));
         });
         hard->add_click_end_callback([this](Widget & w) {
-            EventManager::global().enqueue("StartGame");
+            EventManager::global().enqueue(Event("StartGame"));
         });
         container_ptr->add_widget(std::move(hard));
 
@@ -581,9 +581,9 @@ namespace snake
         // it is only added to one of the widgets.
         sound_ptr[0]->add_click_end_callback([sound_ptr](Widget & w) {
             if (sound_ptr[0]->get_visible())
-                EventManager::global().enqueue("SoundOn");
+                EventManager::global().enqueue(Event("SoundOn"));
             else
-                EventManager::global().enqueue("SoundOff");
+                EventManager::global().enqueue(Event("SoundOff"));
         });
 
         // By default, show the sound-on icons.
@@ -609,7 +609,7 @@ namespace snake
                     new_head.y < 0 || new_head.y >= num_fields_y ||
                     fields_(new_head.x, new_head.y) == FieldType::Snake)
                 {
-                    sfe::EventManager::global().enqueue("GameOver");
+                    sfe::EventManager::global().enqueue(sfe::Event("GameOver"));
                 }
                 else
                 {
@@ -618,11 +618,11 @@ namespace snake
                     bool const got_coin = fields_(new_head.x, new_head.y) == FieldType::Coin;
                     move_snake(got_food || got_coin, new_head);
                     if (got_food)
-                        sfe::EventManager::global().enqueue("CollectedFood");
+                        sfe::EventManager::global().enqueue(sfe::Event("CollectedFood"));
                     else if (got_coin)
-                        sfe::EventManager::global().enqueue("CollectedCoin");
+                        sfe::EventManager::global().enqueue(sfe::Event("CollectedCoin"));
                     else
-                        sfe::EventManager::global().enqueue("MovedSnake");
+                        sfe::EventManager::global().enqueue(sfe::Event("MovedSnake"));
                 }
 
                 // Update the step time.

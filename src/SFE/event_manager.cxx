@@ -5,6 +5,21 @@
 namespace sfe
 {
 
+    Event::Event(std::string const& name)
+        :
+        name_(name)
+    {}
+
+    bool Event::operator<(Event const & other) const
+    {
+        return name_ < other.name_;
+    }
+
+    bool Event::operator==(Event const & other) const
+    {
+        return name_ == other.name_;
+    }
+
     Listener::Listener(Callback f)
         :
         callback_(std::move(f))
