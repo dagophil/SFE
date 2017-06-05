@@ -25,15 +25,6 @@ namespace sfe
         callback_(std::move(f))
     {}
 
-    void Listener::remove(EventManager* event_manager, Event const & event)
-    {
-        // Remove the event manager from the internal list.
-        registers_.erase(
-            std::remove(registers_.begin(), registers_.end(), std::pair<EventManager*, Event>(event_manager, event)),
-            registers_.end()
-        );
-    }
-
     void Listener::set_callback(Callback f)
     {
         callback_ = std::move(f);
@@ -64,7 +55,7 @@ namespace sfe
 
     void EventManager::enqueue(Event const & event)
     {
-        event_queue_.push(event);
+        enqueue(Event(event));
     }
 
     void EventManager::enqueue(Event && event)
@@ -73,7 +64,7 @@ namespace sfe
         if (registered_events_.count(event) == 0)
             throw EventException("EventManager::enqueue(): Tried to post an unregistered event.");
 #endif
-        event_queue_.push(std::forward<Event>(event));
+        event_queue_.push(std::move(event));
     }
 
     void EventManager::dispatch()
