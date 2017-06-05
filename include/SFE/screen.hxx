@@ -2,7 +2,6 @@
 #define SFE_SCREEN_HXX
 
 #include <SFE/sfestd.hxx>
-#include <SFE/event_manager.hxx>
 #include <SFE/game_object.hxx>
 #include <SFE/widget.hxx>
 
@@ -11,6 +10,8 @@
 
 namespace sfe
 {
+    class EventManager;
+    class Listener;
     class ResourceManager;
 
     ////////////////////////////////////////////////////////////
@@ -21,14 +22,19 @@ namespace sfe
     public:
 
         ////////////////////////////////////////////////////////////
-        /// Construct a screen with the given game view.
+        /// Construct a screen with the given game view and the
+        /// given managers.
         ////////////////////////////////////////////////////////////
-        Screen(sf::View game_view, std::shared_ptr<ResourceManager> resource_manager);
+        Screen(
+            sf::View game_view,
+            std::shared_ptr<EventManager> const& event_manager,
+            std::shared_ptr<ResourceManager> const& resource_manager
+        );
 
         ////////////////////////////////////////////////////////////
         /// Virtual default destructor.
         ////////////////////////////////////////////////////////////
-        virtual ~Screen() = default;
+        virtual ~Screen();
 
         ////////////////////////////////////////////////////////////
         /// Update the gui and the game objects.
@@ -88,6 +94,16 @@ namespace sfe
         void set_game_view(sf::View const & view);
 
         ////////////////////////////////////////////////////////////
+        /// Set the event manager.
+        ////////////////////////////////////////////////////////////
+        std::shared_ptr<EventManager> get_event_manager() const;
+
+        ////////////////////////////////////////////////////////////
+        /// Set the resource manager.
+        ////////////////////////////////////////////////////////////
+        std::shared_ptr<ResourceManager> get_resource_manager() const;
+
+        ////////////////////////////////////////////////////////////
         /// Add an event listener.
         ////////////////////////////////////////////////////////////
         void add_listener(std::shared_ptr<Listener> listener);
@@ -115,6 +131,16 @@ namespace sfe
         sf::View game_view_;
 
         ////////////////////////////////////////////////////////////
+        /// The event manager.
+        ////////////////////////////////////////////////////////////
+        std::shared_ptr<EventManager> event_manager_;
+
+        ////////////////////////////////////////////////////////////
+        /// The resource manager.
+        ////////////////////////////////////////////////////////////
+        std::shared_ptr<ResourceManager> resource_manager_;
+
+        ////////////////////////////////////////////////////////////
         /// The game objects.
         ////////////////////////////////////////////////////////////
         std::vector<std::unique_ptr<GameObject> > game_objects_;
@@ -128,11 +154,6 @@ namespace sfe
         /// A container for event listeners.
         ////////////////////////////////////////////////////////////
         std::vector<std::shared_ptr<Listener> > listeners_;
-
-        ////////////////////////////////////////////////////////////
-        /// The resource manager.
-        ////////////////////////////////////////////////////////////
-        std::shared_ptr<ResourceManager> resource_manager_;
 
     }; // class Screen
 

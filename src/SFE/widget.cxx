@@ -1,6 +1,6 @@
 #include <SFE/widget.hxx>
+#include <SFE/event_manager.hxx>
 #include <SFE/input.hxx>
-#include <SFE/resource_manager.hxx>
 
 #include <algorithm>
 #include <string>
@@ -30,7 +30,6 @@ namespace sfe
     Widget* Widget::add_widget(std::unique_ptr<Widget> w)
     {
         auto ret = w.get();
-        ret->set_resource_manager(resource_manager_);
 
         // Use insertion sort with respect to the z-index.
         auto comp = [](auto && a, auto && b)
@@ -312,23 +311,6 @@ namespace sfe
         listeners_.push_back(std::move(listener));
     }
 
-    std::shared_ptr<ResourceManager> Widget::get_resource_manager() const
-    {
-        return resource_manager_;
-    }
-
-    void Widget::set_resource_manager(std::shared_ptr<ResourceManager> const & resource_manager, bool set_in_subwidgets)
-    {
-        resource_manager_ = resource_manager;
-        if (set_in_subwidgets)
-        {
-            for (auto&& w : widgets_)
-            {
-                w->set_resource_manager(resource_manager, set_in_subwidgets);
-            }
-        }
-    }
-
     void Widget::update_impl(sf::Time elapsed_time)
     {}
 
@@ -405,25 +387,21 @@ namespace sfe
         color_ = color;
     }
 
-    ImageWidget::ImageWidget(std::string const & filename)
+    ImageWidget::ImageWidget(std::shared_ptr<sf::Texture> const& texture)
         :
-        filename_(filename)
+        texture_(texture)
     {
+        set_ratio(texture->getSize().x / static_cast<float>(texture->getSize().y));
+    }
+
+    void ImageWidget::set_texture(std::shared_ptr<sf::Texture> const & texture)
+    {
+        texture_ = texture;
     }
 
     void ImageWidget::render_impl(sf::RenderTarget & target) const
     {
-        auto const resource_manager = get_resource_manager();
-        if (!resource_manager)
-        {
-            throw ResourceException("Image widget cannot render without resource manager.");
-        }
-
-        auto const& texture = resource_manager->get_texture(filename_);
-        // FIXME: Avoid const cast.
-        ImageWidget& non_const_this = const_cast<ImageWidget&>(*this);
-        non_const_this.set_ratio(texture.getSize().x / static_cast<float>(texture.getSize().y));
-
+        auto const& texture = *texture_;
         auto const & r = get_render_rect();
         sf::Sprite spr(texture);
         spr.setPosition(r.left, r.top);

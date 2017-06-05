@@ -5,7 +5,7 @@
 namespace sfe
 {
     
-    sf::Texture & ResourceManager::get_texture(std::string const & name)
+    std::shared_ptr<sf::Texture> ResourceManager::get_texture(std::string const & name)
     {
         auto it = textures_.find(name);
         if (it != textures_.end())
@@ -16,18 +16,14 @@ namespace sfe
         else
         {
             // Load the texture.
-            auto p = textures_.insert({ name, {} });
-            it = p.first;
-            if (!it->second.loadFromFile(name))
+            auto texture = std::make_shared<sf::Texture>();
+            if (!texture->loadFromFile(name))
             {
-                textures_.erase(it);
                 throw ResourceException("Could not load image " + name);
             }
-            else
-            {
-                it->second.setSmooth(true);
-                return it->second;
-            }
+            texture->setSmooth(true);
+            textures_.emplace(name, texture);
+            return texture;
         }
     }
 

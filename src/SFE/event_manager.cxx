@@ -36,11 +36,11 @@ namespace sfe
             callback_(event);
     }
 
-    EventManager & EventManager::global()
-    {
-        static EventManager instance;
-        return instance;
-    }
+    EventManager::EventManager() = default;
+
+    EventManager::EventManager(EventManager && other) = default;
+
+    EventManager& EventManager::operator=(EventManager && other) = default;
 
     std::shared_ptr<Listener> EventManager::register_listener(Event const & event, Listener::Callback callback)
     {

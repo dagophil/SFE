@@ -14,7 +14,7 @@ int main()
 
 void snake::SnakeGame::init_impl()
 {
-    load_screen(std::make_unique<GameScreen>(get_resource_manager()));
+    load_screen(std::make_unique<GameScreen>(get_event_manager(), get_resource_manager()));
 }
 
 void snake::SnakeGame::update_impl(sf::Time const & elapsed_time)

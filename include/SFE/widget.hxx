@@ -2,7 +2,6 @@
 #define SFE_WIDGET_HXX
 
 #include <SFE/sfestd.hxx>
-#include <SFE/event_manager.hxx>
 
 #include <SFML/Graphics.hpp>
 
@@ -11,7 +10,7 @@
 
 namespace sfe
 {
-    class ResourceManager;
+    class Listener;
 
     ////////////////////////////////////////////////////////////
     /// Horizontal alignment.
@@ -299,18 +298,6 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         void add_listener(std::shared_ptr<Listener> listener);
 
-        ////////////////////////////////////////////////////////////
-        /// Returns the resource manager.
-        ////////////////////////////////////////////////////////////
-        std::shared_ptr<ResourceManager> get_resource_manager() const;
-
-        ////////////////////////////////////////////////////////////
-        /// Sets the resource manager.
-        /// If set_in_subwidgets is true, the resource manager is
-        /// also set in all sub widgets.
-        ////////////////////////////////////////////////////////////
-        void set_resource_manager(std::shared_ptr<ResourceManager> const& resource_manager, bool set_in_subwidgets = true);
-
     protected:
 
         ////////////////////////////////////////////////////////////
@@ -434,11 +421,6 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         std::vector<std::shared_ptr<Listener> > listeners_;
 
-        ////////////////////////////////////////////////////////////
-        /// The resource manager.
-        ////////////////////////////////////////////////////////////
-        std::shared_ptr<ResourceManager> resource_manager_;
-
     }; // class Widget
 
     ////////////////////////////////////////////////////////////
@@ -487,9 +469,14 @@ namespace sfe
     public:
 
         ////////////////////////////////////////////////////////////
-        /// Create a widget from the given image.
+        /// Create an image widget from the given texture.
         ////////////////////////////////////////////////////////////
-        ImageWidget(std::string const & filename);
+        ImageWidget(std::shared_ptr<sf::Texture> const& texture);
+
+        ////////////////////////////////////////////////////////////
+        /// Set the texture.
+        ////////////////////////////////////////////////////////////
+        void set_texture(std::shared_ptr<sf::Texture> const& texture);
 
     protected:
 
@@ -499,9 +486,9 @@ namespace sfe
         virtual void render_impl(sf::RenderTarget & target) const override;
 
         ////////////////////////////////////////////////////////////
-        /// The image filename.
+        /// The texture.
         ////////////////////////////////////////////////////////////
-        std::string filename_;
+        std::shared_ptr<sf::Texture> texture_;
 
     }; // class ImageWidget
 

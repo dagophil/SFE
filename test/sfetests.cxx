@@ -1,4 +1,5 @@
 #include <SFE/input.hxx>
+#include <SFE/event_manager.hxx>
 #include <SFE/resource_manager.hxx>
 #include <SFE/screen.hxx>
 #include <SFE/widget.hxx>
@@ -7,7 +8,7 @@
 
 #include <iostream>
 
-void create_widgets(sfe::Widget & container)
+void create_widgets(sfe::ResourceManager & resource_manager, sfe::Widget & container)
 {
     using namespace sfe;
 
@@ -37,7 +38,8 @@ void create_widgets(sfe::Widget & container)
     });
 
     // Add the disk image on top of the green.
-    auto w2 = std::make_unique<ImageWidget>("disk.png");
+    auto disk_texture = resource_manager.get_texture("disk.png");
+    auto w2 = std::make_unique<ImageWidget>(disk_texture);
     w2->set_scale(Scale::X);
     w2->set_align_x(AlignX::Center);
     w2->add_click_begin_callback([](Widget & w) {
@@ -62,11 +64,12 @@ int main()
     unsigned int const WIDTH = 800;
     unsigned int const HEIGHT = 600;
 
+    auto event_manager = std::make_shared<EventManager>();
     auto resource_manager = std::make_shared<ResourceManager>();
 
     // Create the screen with some widgets.
-    Screen screen(sf::View({ 0, 0, 1, 1 }), resource_manager);
-    create_widgets(screen.get_gui());
+    Screen screen(sf::View({ 0, 0, 1, 1 }), event_manager, resource_manager);
+    create_widgets(*resource_manager, screen.get_gui());
 
     // Create a clock to measure the elapsed time per frame.
     sf::Clock clock;

@@ -8,6 +8,7 @@ namespace sfe
     Game::Game(unsigned int width, unsigned int height, std::string const & title, sf::Uint32 style)
         :
         window_(sf::VideoMode(width, height), title, style),
+        event_manager_(std::make_shared<EventManager>()),
         resource_manager_(std::make_shared<ResourceManager>())
     {}
 
@@ -55,7 +56,7 @@ namespace sfe
             update_impl(elapsed_time);
 
             // Handle all events.
-            EventManager::global().dispatch();
+            event_manager_->dispatch();
 
             // Draw the screen.
             window_.clear();
@@ -83,8 +84,15 @@ namespace sfe
             requested_screen_->set_game_view(sf::View({ -ratio, -1, 2 * ratio, 2 }));
         }
     }
+
+    std::shared_ptr<EventManager> Game::get_event_manager() const
+    {
+        return event_manager_;
+    }
+
     std::shared_ptr<ResourceManager> Game::get_resource_manager() const
     {
         return resource_manager_;
     }
-}
+
+} // namespace sfe

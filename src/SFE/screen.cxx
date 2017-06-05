@@ -1,4 +1,5 @@
 #include <SFE/screen.hxx>
+#include <SFE/event_manager.hxx>
 #include <SFE/resource_manager.hxx>
 #include <SFE/utility.hxx>
 
@@ -6,13 +7,17 @@
 
 namespace sfe
 {
-    Screen::Screen(sf::View game_view, std::shared_ptr<ResourceManager> resource_manager)
-        :
-        game_view_(game_view),
+    Screen::Screen(
+        sf::View game_view,
+        std::shared_ptr<EventManager> const& event_manager,
+        std::shared_ptr<ResourceManager> const& resource_manager
+    )   :
+        game_view_(std::move(game_view)),
+        event_manager_(event_manager),
         resource_manager_(resource_manager)
-    {
-        gui_.set_resource_manager(resource_manager_);
-    }
+    {}
+
+    Screen::~Screen() = default;
 
     void Screen::update(sf::RenderWindow const & window, sf::Time elapsed_time)
     {
@@ -75,7 +80,6 @@ namespace sfe
     GameObject* Screen::add_game_object(std::unique_ptr<GameObject> obj)
     {
         auto ptr = obj.get();
-        ptr->set_resource_manager(resource_manager_);
         game_objects_.push_back(std::move(obj));
         return ptr;
     }
@@ -117,6 +121,16 @@ namespace sfe
     void Screen::set_game_view(sf::View const & view)
     {
         game_view_ = view;
+    }
+
+    std::shared_ptr<EventManager> Screen::get_event_manager() const
+    {
+        return event_manager_;
+    }
+
+    std::shared_ptr<ResourceManager> Screen::get_resource_manager() const
+    {
+        return resource_manager_;
     }
 
     void Screen::add_listener(std::shared_ptr<Listener> listener)

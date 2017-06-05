@@ -39,7 +39,10 @@ namespace snake
         ////////////////////////////////////////////////////////////
         /// The default constructor.
         ////////////////////////////////////////////////////////////
-        GameScreen(std::shared_ptr<sfe::ResourceManager> resource_manager);
+        GameScreen(
+            std::shared_ptr<sfe::EventManager> const& event_manager,
+            std::shared_ptr<sfe::ResourceManager> const& resource_manager
+        );
 
     private:
 
@@ -255,9 +258,11 @@ namespace snake
 
     }; // class GameScreen
 
-    inline GameScreen::GameScreen(std::shared_ptr<sfe::ResourceManager> resource_manager)
-        :
-        Screen(sf::View(), resource_manager),
+    inline GameScreen::GameScreen(
+        std::shared_ptr<sfe::EventManager> const& event_manager,
+        std::shared_ptr<sfe::ResourceManager> const& resource_manager
+    )   :
+        Screen(sf::View(), event_manager, resource_manager),
         fields_(num_fields_x, num_fields_y, FieldType::Empty),
         rand_engine_(std::random_device()())
     {
@@ -305,13 +310,15 @@ namespace snake
 
         // Create the background image.
         auto const ratio = get_game_view().getSize().x / get_game_view().getSize().y;
-        auto bg = std::make_unique<ImageObject>("img/camel_bg.jpg");
+        auto camel_texture = get_resource_manager()->get_texture("img/camel_bg.jpg");
+        auto bg = std::make_unique<ImageObject>(camel_texture);
         bg->set_z_index(-2);
         bg->set_size(2 * ratio, 2);
         add_game_object(std::move(bg));
 
         // Create the borders of the game field.
-        auto field_border = std::make_unique<ImageObject>("img/frame.png");
+        auto frame_texture = get_resource_manager()->get_texture("img/frame.png");
+        auto field_border = std::make_unique<ImageObject>(frame_texture);
         field_border->set_z_index(-1);
         field_border->set_size(game_field_width * 1.11286407767f, game_field_height * 1.16006884682f);
         add_game_object(std::move(field_border));
@@ -322,7 +329,8 @@ namespace snake
             create_body_part(snake_head_.x - 1 - i, snake_head_.y);
 
         // Spawn the first food item.
-        auto food = std::make_unique<ImageObject>("img/strawberry.png");
+        auto strawberry_texture = get_resource_manager()->get_texture("img/strawberry.png");
+        auto food = std::make_unique<ImageObject>(strawberry_texture);
         food->set_size(field_width, field_height);
         food_ = add_game_object(std::move(food));
         spawn_food();
@@ -333,21 +341,27 @@ namespace snake
         using namespace sfe;
 
         // Register the event types.
-        EventManager::global().register_event(Event("SelectEasyDifficulty"));
-        EventManager::global().register_event(Event("SelectHardDifficulty"));
-        EventManager::global().register_event(Event("StartGame"));
-        EventManager::global().register_event(Event("MovedSnake"));
-        EventManager::global().register_event(Event("CollectedFood"));
-        EventManager::global().register_event(Event("CollectedCoin"));
-        EventManager::global().register_event(Event("AddSpecialEffect"));
-        EventManager::global().register_event(Event("ClearSpecialEffects"));
-        EventManager::global().register_event(Event("GameOver"));
-        EventManager::global().register_event(Event("SoundOn"));
-        EventManager::global().register_event(Event("SoundOff"));
+        auto event_manager_shared_ptr = get_event_manager();
+        if (!event_manager_shared_ptr)
+        {
+            throw GameException("The GameScreen needs an event manager.");
+        }
+        auto & event_manager = *event_manager_shared_ptr;
+        event_manager.register_event(Event("SelectEasyDifficulty"));
+        event_manager.register_event(Event("SelectHardDifficulty"));
+        event_manager.register_event(Event("StartGame"));
+        event_manager.register_event(Event("MovedSnake"));
+        event_manager.register_event(Event("CollectedFood"));
+        event_manager.register_event(Event("CollectedCoin"));
+        event_manager.register_event(Event("AddSpecialEffect"));
+        event_manager.register_event(Event("ClearSpecialEffects"));
+        event_manager.register_event(Event("GameOver"));
+        event_manager.register_event(Event("SoundOn"));
+        event_manager.register_event(Event("SoundOff"));
 
         auto create_and_register_listener = [&](Event const& event, Listener::Callback f)
         {
-            auto listener = EventManager::global().register_listener(event, f);
+            auto listener = event_manager.register_listener(event, f);
             add_listener(std::move(listener));
         };
 
@@ -380,7 +394,7 @@ namespace snake
         // Collected food.
         create_and_register_listener(
             Event("CollectedFood"),
-            [this](Event const & event) {
+            [this, &event_manager](Event const & event) {
                 // TODO: Add some points.
                 ++food_counter_;
                 ++event_counter_;
@@ -391,9 +405,9 @@ namespace snake
                 if (!easymode_)
                 {
                     if ((event_counter_ + 4) % 8 == 0)
-                        sfe::EventManager::global().enqueue(Event("AddSpecialEffect"));
+                        event_manager.enqueue(Event("AddSpecialEffect"));
                     if (event_counter_ > 0 && (event_counter_ + 8) % 8 == 0)
-                        sfe::EventManager::global().enqueue(Event("ClearSpecialEffects"));
+                        event_manager.enqueue(Event("ClearSpecialEffects"));
                 }
             }
         );
@@ -464,12 +478,19 @@ namespace snake
     {
         using namespace sfe;
 
+        auto event_manager_shared_ptr = get_event_manager();
+        if (!event_manager_shared_ptr)
+        {
+            throw GameException("The GameScreen needs an event manager.");
+        }
+        auto & event_manager = *event_manager_shared_ptr;
+
         // Create the container of the difficulty selector.
         auto difficulty_container = std::make_unique<Widget>();
         auto container_ptr = get_gui().add_widget(std::move(difficulty_container));
         container_ptr->set_align_y(AlignY::Center);
         container_ptr->set_height(0.4f);
-        auto difficulty_remover = EventManager::global().register_listener(
+        auto difficulty_remover = event_manager.register_listener(
             Event("StartGame"),
             [container_ptr](Event const& event)
         {
@@ -478,20 +499,21 @@ namespace snake
         container_ptr->add_listener(std::move(difficulty_remover));
 
         // Create the box for the currently selected item.
-        auto text_frame = std::make_unique<ImageWidget>("img/text_frame.png");
+        auto text_frame_texture = get_resource_manager()->get_texture("img/text_frame.png");
+        auto text_frame = std::make_unique<ImageWidget>(text_frame_texture);
         auto frame_ptr = container_ptr->add_widget(std::move(text_frame));
         frame_ptr->set_align_x(AlignX::Center);
         frame_ptr->set_align_y(AlignY::Top);
         frame_ptr->set_height(0.5f);
         frame_ptr->set_scale(Scale::X);
-        auto frame_easy_selector = EventManager::global().register_listener(
+        auto frame_easy_selector = event_manager.register_listener(
             Event("SelectEasyDifficulty"),
             [frame_ptr](Event const& event)
         {
             frame_ptr->set_align_y(AlignY::Top);
         });
         frame_ptr->add_listener(std::move(frame_easy_selector));
-        auto frame_hard_selector = EventManager::global().register_listener(
+        auto frame_hard_selector = event_manager.register_listener(
             Event("SelectHardDifficulty"),
             [frame_ptr](Event const& event)
         {
@@ -500,30 +522,32 @@ namespace snake
         frame_ptr->add_listener(std::move(frame_hard_selector));
 
         // Create the "easy" text.
-        auto easy = std::make_unique<ImageWidget>("img/easy.png");
+        auto easy_texture = get_resource_manager()->get_texture("img/easy.png");
+        auto easy = std::make_unique<ImageWidget>(easy_texture);
         easy->set_align_x(AlignX::Center);
         easy->set_align_y(AlignY::Top);
         easy->set_height(0.5f);
         easy->set_scale(Scale::X);
-        easy->add_mouse_enter_callback([frame_ptr](Widget & w) {
-            EventManager::global().enqueue(Event("SelectEasyDifficulty"));
+        easy->add_mouse_enter_callback([frame_ptr, &event_manager](Widget & w) {
+            event_manager.enqueue(Event("SelectEasyDifficulty"));
         });
-        easy->add_click_end_callback([this](Widget & w) {
-            EventManager::global().enqueue(Event("StartGame"));
+        easy->add_click_end_callback([this, &event_manager](Widget & w) {
+            event_manager.enqueue(Event("StartGame"));
         });
         container_ptr->add_widget(std::move(easy));
 
         // Create the "hard" text.
-        auto hard = std::make_unique<ImageWidget>("img/hard.png");
+        auto hard_texture = get_resource_manager()->get_texture("img/hard.png");
+        auto hard = std::make_unique<ImageWidget>(hard_texture);
         hard->set_align_x(AlignX::Center);
         hard->set_align_y(AlignY::Bottom);
         hard->set_height(0.5f);
         hard->set_scale(Scale::X);
-        hard->add_mouse_enter_callback([frame_ptr](Widget & w) {
-            EventManager::global().enqueue(Event("SelectHardDifficulty"));
+        hard->add_mouse_enter_callback([&event_manager](Widget & w) {
+            event_manager.enqueue(Event("SelectHardDifficulty"));
         });
-        hard->add_click_end_callback([this](Widget & w) {
-            EventManager::global().enqueue(Event("StartGame"));
+        hard->add_click_end_callback([&event_manager](Widget & w) {
+            event_manager.enqueue(Event("StartGame"));
         });
         container_ptr->add_widget(std::move(hard));
 
@@ -548,7 +572,8 @@ namespace snake
         for (int i = 0; i < 4; ++i)
         {
             // Create the sound widget.
-            auto sound = std::make_unique<ImageWidget>(sound_file[i]);
+            auto sound_texture = get_resource_manager()->get_texture(sound_file[i]);
+            auto sound = std::make_unique<ImageWidget>(sound_texture);
             auto ptr = sound_container_ptr->add_widget(std::move(sound));
             sound_ptr.push_back(ptr);
             ptr->set_scale(Scale::X);
@@ -570,12 +595,12 @@ namespace snake
             {
                 ptr->set_visible(!ptr->get_visible());
             };
-            auto sound_on_listener = EventManager::global().register_listener(
+            auto sound_on_listener = event_manager.register_listener(
                 Event("SoundOn"),
                 sound_toggle
             );
             ptr->add_listener(std::move(sound_on_listener));
-            auto sound_off_listener = EventManager::global().register_listener(
+            auto sound_off_listener = event_manager.register_listener(
                 Event("SoundOff"),
                 sound_toggle
             );
@@ -585,11 +610,11 @@ namespace snake
         // If this click callback would be added to all sound icon widgets,
         // it would be sent four times on a single click. To prevent this,
         // it is only added to one of the widgets.
-        sound_ptr[0]->add_click_end_callback([sound_ptr](Widget & w) {
+        sound_ptr[0]->add_click_end_callback([sound_ptr, &event_manager](Widget & w) {
             if (sound_ptr[0]->get_visible())
-                EventManager::global().enqueue(Event("SoundOn"));
+                event_manager.enqueue(Event("SoundOn"));
             else
-                EventManager::global().enqueue(Event("SoundOff"));
+                event_manager.enqueue(Event("SoundOff"));
         });
 
         // By default, show the sound-on icons.
@@ -609,13 +634,20 @@ namespace snake
             until_next_step_ -= elapsed_time;
             if (until_next_step_ < sf::Time::Zero)
             {
+                auto event_manager_shared_ptr = get_event_manager();
+                if (!event_manager_shared_ptr)
+                {
+                    throw sfe::GameException("The GameScreen needs an event manager.");
+                }
+                auto & event_manager = *event_manager_shared_ptr;
+
                 // Check if the snake collides with itself or the boundary.
                 auto const new_head = get_new_head();
                 if (new_head.x < 0 || new_head.x >= num_fields_x ||
                     new_head.y < 0 || new_head.y >= num_fields_y ||
                     fields_(new_head.x, new_head.y) == FieldType::Snake)
                 {
-                    sfe::EventManager::global().enqueue(sfe::Event("GameOver"));
+                    event_manager.enqueue(sfe::Event("GameOver"));
                 }
                 else
                 {
@@ -624,11 +656,11 @@ namespace snake
                     bool const got_coin = fields_(new_head.x, new_head.y) == FieldType::Coin;
                     move_snake(got_food || got_coin, new_head);
                     if (got_food)
-                        sfe::EventManager::global().enqueue(sfe::Event("CollectedFood"));
+                        event_manager.enqueue(sfe::Event("CollectedFood"));
                     else if (got_coin)
-                        sfe::EventManager::global().enqueue(sfe::Event("CollectedCoin"));
+                        event_manager.enqueue(sfe::Event("CollectedCoin"));
                     else
-                        sfe::EventManager::global().enqueue(sfe::Event("MovedSnake"));
+                        event_manager.enqueue(sfe::Event("MovedSnake"));
                 }
 
                 // Update the step time.
@@ -700,7 +732,8 @@ namespace snake
 
         // Create the game object and add it to the screen.
         auto const pos = field_to_view(x, y);
-        auto head = std::make_unique<sfe::ImageObject>("img/snake_head.png");
+        auto snake_head_texture = get_resource_manager()->get_texture("img/snake_head.png");
+        auto head = std::make_unique<sfe::ImageObject>(snake_head_texture);
         head->set_size(field_width, field_height);
         head->set_position(pos);
         snake_head_.obj = add_game_object(std::move(head));
@@ -716,7 +749,8 @@ namespace snake
 
         // Create the game object and add it to the screen.
         auto const pos = field_to_view(x, y);
-        auto body = std::make_unique<sfe::ImageObject>("img/snake_body.png");
+        auto snake_body_texture = get_resource_manager()->get_texture("img/snake_body.png");
+        auto body = std::make_unique<sfe::ImageObject>(snake_body_texture);
         body->set_size(field_width, field_height);
         body->set_position(pos);
         part.obj = add_game_object(std::move(body));
@@ -844,7 +878,8 @@ namespace snake
                 auto part_ptr = dynamic_cast<ImageObject*>(part.obj);
                 if (part_ptr == nullptr)
                     throw ScreenException("GameScreen::add_special_effect(): Failed to cast snake body part to ImageObject*.");
-                part_ptr->set_filename("img/coin.png");
+                auto coin_texture = get_resource_manager()->get_texture("img/coin.png");
+                part_ptr->set_texture(coin_texture);
                 coins_[{part.x, part.y}] = part_ptr;
             }
 

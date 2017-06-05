@@ -1,5 +1,4 @@
 #include <SFE/game_object.hxx>
-#include <SFE/resource_manager.hxx>
 
 namespace sfe
 {
@@ -88,32 +87,16 @@ namespace sfe
         visible_ = b;
     }
 
-    void GameObject::set_resource_manager(std::shared_ptr<ResourceManager> const & resource_manager)
-    {
-        resource_manager_ = resource_manager;
-    }
-
-    std::shared_ptr<ResourceManager> GameObject::get_resource_manager() const
-    {
-        return resource_manager_;
-    }
-
-    ImageObject::ImageObject(std::string const & filename)
+    ImageObject::ImageObject(std::shared_ptr<sf::Texture> const& texture)
         :
-        filename_(filename),
+        texture_(texture),
         mirror_x_(false),
         mirror_y_(false)
     {}
 
     void ImageObject::render_impl(sf::RenderTarget & target) const
     {
-        auto const resource_manager = get_resource_manager();
-        if (!resource_manager)
-        {
-            throw ResourceException("Image object cannot render without resource manager.");
-        }
-
-        auto const & texture = resource_manager->get_texture(filename_);
+        auto const & texture = *texture_;
         sf::Sprite spr(texture);
         float rotation_offset = 0;
         if (mirror_x_ && mirror_y_)
@@ -128,16 +111,6 @@ namespace sfe
         spr.setScale(get_size().x / static_cast<float>(texture.getSize().x),
                      get_size().y / static_cast<float>(texture.getSize().y));
         target.draw(spr);
-    }
-
-    std::string const & ImageObject::get_filename() const
-    {
-        return filename_;
-    }
-
-    void ImageObject::set_filename(std::string const & filename)
-    {
-        filename_ = filename;
     }
 
     bool ImageObject::get_mirror_x() const
@@ -158,5 +131,9 @@ namespace sfe
     void ImageObject::set_mirror_y(bool b)
     {
         mirror_y_ = b;
+    }
+    void ImageObject::set_texture(std::shared_ptr<sf::Texture> const & texture)
+    {
+        texture_ = texture;
     }
 }

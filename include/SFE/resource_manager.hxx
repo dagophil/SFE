@@ -5,8 +5,8 @@
 
 #include <SFML/Graphics.hpp>
 
-#include <iostream>
 #include <map>
+#include <memory>
 #include <string>
 
 namespace sfe
@@ -24,14 +24,14 @@ namespace sfe
         /// is returned. Otherwise, the texture will be loaded from
         /// the file with the given nam.
         ////////////////////////////////////////////////////////////
-        sf::Texture & get_texture(std::string const & name);
+        std::shared_ptr<sf::Texture> get_texture(std::string const & name);
 
     private:
         
         ////////////////////////////////////////////////////////////
         /// The texture storage.
         ////////////////////////////////////////////////////////////
-        std::map<std::string, sf::Texture> textures_;
+        std::map<std::string, std::shared_ptr<sf::Texture>> textures_;
 
     }; // class ResourceManager
 
