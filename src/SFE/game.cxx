@@ -2,20 +2,137 @@
 #include <SFE/event_manager.hxx>
 #include <SFE/input.hxx>
 #include <SFE/resource_manager.hxx>
+#include <SFE/screen.hxx>
 
 namespace sfe
 {
-    Game::Game(unsigned int width, unsigned int height, std::string const & title, sf::Uint32 style)
-        :
+    class Game::impl
+    {
+    public:
+
+        impl(
+            Game & game,
+            unsigned int const width,
+            unsigned int const height,
+            std::string const& title,
+            sf::Uint32 const style = sf::Style::Default
+        );
+
+        void run();
+
+        sf::RenderWindow & get_window();
+
+        sf::RenderWindow const& get_window() const;
+
+        void load_screen(
+            std::unique_ptr<Screen> new_screen,
+            bool const change_to_default_view
+        );
+
+        std::shared_ptr<EventManager> get_event_manager() const;
+
+        std::shared_ptr<ResourceManager> get_resource_manager() const;
+
+    private:
+
+        ////////////////////////////////////////////////////////////
+        /// Reference to the actual game.
+        ////////////////////////////////////////////////////////////
+        Game & game_;
+
+        ////////////////////////////////////////////////////////////
+        /// The current screen.
+        ////////////////////////////////////////////////////////////
+        std::unique_ptr<Screen> screen_;
+
+        ////////////////////////////////////////////////////////////
+        /// The new requested screen. The pointer is only valid
+        /// between a call to load_screen() and the next frame.
+        ////////////////////////////////////////////////////////////
+        std::unique_ptr<Screen> requested_screen_;
+
+        ////////////////////////////////////////////////////////////
+        /// The render window.
+        ////////////////////////////////////////////////////////////
+        sf::RenderWindow window_;
+
+        ////////////////////////////////////////////////////////////
+        /// The clock that measures the elapsed time per frame.
+        ////////////////////////////////////////////////////////////
+        sf::Clock clock_;
+
+        ////////////////////////////////////////////////////////////
+        /// The event manager.
+        ////////////////////////////////////////////////////////////
+        std::shared_ptr<EventManager> event_manager_;
+
+        ////////////////////////////////////////////////////////////
+        /// The resource manager.
+        ////////////////////////////////////////////////////////////
+        std::shared_ptr<ResourceManager> resource_manager_;
+
+    };
+
+    Game::Game(
+        unsigned int const width,
+        unsigned int const height,
+        std::string const & title,
+        sf::Uint32 const style
+    )   :
+        impl_{ std::make_unique<impl>(*this, width, height, title, style) }
+    {}
+
+    Game::~Game() = default;
+
+    void Game::run()
+    {
+        impl_->run();
+    }
+
+    sf::RenderWindow & Game::get_window()
+    {
+        return impl_->get_window();
+    }
+
+    sf::RenderWindow const & Game::get_window() const
+    {
+        return impl_->get_window();
+    }
+
+    void Game::load_screen(
+        std::unique_ptr<Screen> new_screen,
+        bool const change_to_default_view
+    ){
+        impl_->load_screen(std::move(new_screen), change_to_default_view);
+    }
+
+    std::shared_ptr<EventManager> Game::get_event_manager() const
+    {
+        return impl_->get_event_manager();
+    }
+
+    std::shared_ptr<ResourceManager> Game::get_resource_manager() const
+    {
+        return impl_->get_resource_manager();
+    }
+
+    Game::impl::impl(
+        Game & game,
+        unsigned int const width,
+        unsigned int const height,
+        std::string const& title,
+        sf::Uint32 const style
+    )   :
+        game_(game),
         window_(sf::VideoMode(width, height), title, style),
         event_manager_(std::make_shared<EventManager>()),
         resource_manager_(std::make_shared<ResourceManager>())
     {}
 
-    void Game::run()
+    void Game::impl::run()
     {
         // Initialize the components.
-        init_impl();
+        game_.init_impl();
 
         // Load the first screen.
         if (requested_screen_)
@@ -53,7 +170,7 @@ namespace sfe
             screen_->update(window_, elapsed_time);
 
             // Call the concrete update method.
-            update_impl(elapsed_time);
+            game_.update_impl(elapsed_time);
 
             // Handle all events.
             event_manager_->dispatch();
@@ -65,18 +182,20 @@ namespace sfe
         }
     }
 
-    sf::RenderWindow & Game::get_window()
+    sf::RenderWindow & Game::impl::get_window()
     {
         return window_;
     }
 
-    sf::RenderWindow const & Game::get_window() const
+    sf::RenderWindow const & Game::impl::get_window() const
     {
         return window_;
     }
 
-    void Game::load_screen(std::unique_ptr<Screen> new_screen, bool change_to_default_view)
-    {
+    void Game::impl::load_screen(
+        std::unique_ptr<Screen> new_screen,
+        bool const change_to_default_view
+    ){
         requested_screen_ = std::move(new_screen);
         if (change_to_default_view)
         {
@@ -85,12 +204,12 @@ namespace sfe
         }
     }
 
-    std::shared_ptr<EventManager> Game::get_event_manager() const
+    std::shared_ptr<EventManager> Game::impl::get_event_manager() const
     {
         return event_manager_;
     }
 
-    std::shared_ptr<ResourceManager> Game::get_resource_manager() const
+    std::shared_ptr<ResourceManager> Game::impl::get_resource_manager() const
     {
         return resource_manager_;
     }

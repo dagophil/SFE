@@ -2,13 +2,24 @@
 #define SFE_GAME_HXX
 
 #include <SFE/sfestd.hxx>
-#include <SFE/screen.hxx>
+#include <SFE/propagate_const.hxx>
 
-#include <SFML/Graphics.hpp>
+#include <SFML/Config.hpp>
+#include <SFML/Window/WindowStyle.hpp>
+
+#include <memory>
+
+namespace sf
+{
+    class RenderWindow;
+    class Time;
+}
 
 namespace sfe
 {
+    class EventManager;
     class ResourceManager;
+    class Screen;
 
     ////////////////////////////////////////////////////////////
     /// Base class for all game applications.
@@ -20,7 +31,17 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         /// Initialize the game.
         ////////////////////////////////////////////////////////////
-        Game(unsigned int width, unsigned int height, std::string const & title, sf::Uint32 style = sf::Style::Default);
+        Game(
+            unsigned int const width,
+            unsigned int const height,
+            std::string const& title,
+            sf::Uint32 const style = sf::Style::Default
+        );
+
+        ////////////////////////////////////////////////////////////
+        /// Default destructor.
+        ////////////////////////////////////////////////////////////
+        ~Game();
 
         ////////////////////////////////////////////////////////////
         /// Run the game loop.
@@ -40,7 +61,10 @@ namespace sfe
         ////////////////////////////////////////////////////////////
         /// Load the given screen.
         ////////////////////////////////////////////////////////////
-        void load_screen(std::unique_ptr<Screen> new_screen, bool change_to_default_view = true);
+        void load_screen(
+            std::unique_ptr<Screen> new_screen,
+            bool const change_to_default_view = true
+        );
 
         ////////////////////////////////////////////////////////////
         /// Return the event manager.
@@ -54,6 +78,10 @@ namespace sfe
 
     private:
 
+        class impl;
+        friend class impl; // necessary to access private virtual methods
+        sfe::propagate_const<std::unique_ptr<impl>> impl_;
+
         ////////////////////////////////////////////////////////////
         /// The concrete initialization of the derived class, which
         /// is called at the beginning of run().
@@ -65,37 +93,6 @@ namespace sfe
         /// called once per frame.
         ////////////////////////////////////////////////////////////
         virtual void update_impl(sf::Time const& elapsed_time) = 0;
-
-        ////////////////////////////////////////////////////////////
-        /// The current screen.
-        ////////////////////////////////////////////////////////////
-        std::unique_ptr<Screen> screen_;
-
-        ////////////////////////////////////////////////////////////
-        /// The new requested screen. The pointer is only valid
-        /// between a call to load_screen() and the next frame.
-        ////////////////////////////////////////////////////////////
-        std::unique_ptr<Screen> requested_screen_;
-
-        ////////////////////////////////////////////////////////////
-        /// The render window.
-        ////////////////////////////////////////////////////////////
-        sf::RenderWindow window_;
-
-        ////////////////////////////////////////////////////////////
-        /// The clock that measures the elapsed time per frame.
-        ////////////////////////////////////////////////////////////
-        sf::Clock clock_;
-
-        ////////////////////////////////////////////////////////////
-        /// The event manager.
-        ////////////////////////////////////////////////////////////
-        std::shared_ptr<EventManager> event_manager_;
-
-        ////////////////////////////////////////////////////////////
-        /// The resource manager.
-        ////////////////////////////////////////////////////////////
-        std::shared_ptr<ResourceManager> resource_manager_;
 
     }; // class Game
 
