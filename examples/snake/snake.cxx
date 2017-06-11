@@ -1,6 +1,5 @@
-#include <iostream>
-
 #include "snake.hxx"
+#include "gamescreen.hxx"
 
 int main()
 {

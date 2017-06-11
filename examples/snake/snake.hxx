@@ -1,15 +1,10 @@
 #ifndef SFE_EXAMPLE_SNAKE_HXX
 #define SFE_EXAMPLE_SNAKE_HXX
 
-#include <deque>
-#include <random>
-
 #include <SFE/game.hxx>
 #include <SFE/ndarray.hxx>
 #include <SFE/input.hxx>
 #include <SFE/event_manager.hxx>
-
-#include "gamescreen.hxx"
 
 namespace snake
 {

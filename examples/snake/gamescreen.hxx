@@ -5,7 +5,10 @@
 #include <SFE/resource_manager.hxx>
 #include <SFE/screen.hxx>
 
+#include <deque>
+#include <iostream>
 #include <memory>
+#include <random>
 
 namespace snake
 {
